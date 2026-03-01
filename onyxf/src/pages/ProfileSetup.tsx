@@ -80,7 +80,7 @@ export default function ProfileSetup() {
     const filePath = `${type}s/${fileName}`;
 
     try {
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('profiles')
         .upload(filePath, file);
 

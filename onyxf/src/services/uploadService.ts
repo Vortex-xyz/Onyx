@@ -43,7 +43,7 @@ export const uploadMedia = async (
   const filePath = `${user.id}/${type}/${fileName}`;
 
   // Upload to Supabase Storage
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('uploads')
     .upload(filePath, file, {
       cacheControl: '3600',

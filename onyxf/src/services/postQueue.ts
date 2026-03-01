@@ -96,7 +96,7 @@ class PostQueueService {
         }
 
         // Insert post with 30s timeout
-        const { data, error } = await Promise.race([
+        const { error } = await Promise.race([
           supabase
             .from('posts')
             .insert({

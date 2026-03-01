@@ -8,7 +8,6 @@ import {
   isFollowing, 
   getFollowers, 
   getFollowing, 
-  getFollowCounts,
   FollowUser 
 } from '../services/followService';
 import toast from 'react-hot-toast';
@@ -119,7 +118,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
 
   const profileUserId = userId || currentUser?.id;
   const isOwnProfile = currentUser?.id === profileUserId;
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (profileUserId) {
       loadProfile();
