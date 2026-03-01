@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../config/supabaseClient';
-import { 
-  createPost, 
-  fetchPosts, 
-  Post, 
-  likePost, 
+import {
+  createPost,
+  fetchPosts,
+  Post,
+  likePost,
   deletePost,
   createComment,
   fetchComments,
@@ -19,11 +19,11 @@ import { ExplorePage } from './ExplorePage';
 import GalleryPage from './GalleryPage';
 import { ProfilePage } from './ProfilePage';
 import toast from 'react-hot-toast';
-import { 
-  FaHome, 
-  FaImages, 
-  FaUsers, 
-  FaShoppingBag, 
+import {
+  FaHome,
+  FaImages,
+  FaUsers,
+  FaShoppingBag,
   FaUser,
   FaHeart,
   FaComment,
@@ -92,7 +92,7 @@ export default function HomePage() {
 
   // ✅ Auth loading state
   const [authLoading, setAuthLoading] = useState(true);
-  
+
   // State management
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState('feed');
@@ -108,89 +108,81 @@ export default function HomePage() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [queueStatus, setQueueStatus] = useState({ pending: 0, failed: 0 });
   const [showExplore, setShowExplore] = useState(false);
-  
-  // ✅ NEW: Follow state for posts
+
+  // ✅ Follow state for posts
   const [followingUsers, setFollowingUsers] = useState(new Set<string>());
   const [followLoading, setFollowLoading] = useState<string | null>(null);
-  
+
   // Post creation state
   const [postContent, setPostContent] = useState('');
   const [postMediaUrl, setPostMediaUrl] = useState('');
   const [postMediaType, setPostMediaType] = useState<'image' | 'video' | undefined>();
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
-  
+
   // Comments state
   const [showComments, setShowComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [commentText, setCommentText] = useState('');
   const [loadingComments, setLoadingComments] = useState<string | null>(null);
-  
+
   // UI state
   const [showPostMenu, setShowPostMenu] = useState<string | null>(null);
-  
+
   // Refs
+  // ✅ FIX: postMenuRef REMOVED — was a single ref shared across all posts in .map(),
+  // always pointing to the last rendered post's node. Replaced with data-post-menu attribute.
   const observerTarget = useRef(null);
   const spotlightRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const postMenuRef = useRef<HTMLDivElement>(null);
 
   // ✅ Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setAuthLoading(true);
-        
+
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (!session) {
           navigate('/login');
           return;
         }
-        
+
         setLoading(true);
         console.log('📥 Loading initial posts...');
-        
-        // Fetch posts
+
         const fetchedPosts = await fetchPosts(10, 0);
         setPosts(fetchedPosts);
         console.log(`✅ Loaded ${fetchedPosts.length} posts`);
-        
-        // Load user's liked posts
+
         const { data: userLikes } = await supabase
           .from('likes')
           .select('post_id')
           .eq('user_id', session.user.id);
-        
+
         if (userLikes) {
-          setLikedPosts(new Set(userLikes.map(like => like.post_id)));
+          setLikedPosts(new Set(userLikes.map((like: { post_id: string }) => like.post_id)));
           console.log(`💜 User has ${userLikes.length} liked posts`);
         }
 
-        // ✅ NEW: Load following status for all post authors
         const authorIds = [...new Set(fetchedPosts.map(p => p.user_id).filter(id => id !== session.user.id))];
         console.log('📊 Checking follow status for', authorIds.length, 'authors');
-        
+
         if (authorIds.length > 0) {
           const followingStatuses = await Promise.all(
             authorIds.map(async (authorId) => {
               const isFollowingAuthor = await checkIsFollowing(authorId);
-              console.log(`👤 User ${authorId}: ${isFollowingAuthor ? 'Following ✅' : 'Not following ❌'}`);
-              return {
-                userId: authorId,
-                isFollowing: isFollowingAuthor
-              };
+              return { userId: authorId, isFollowing: isFollowingAuthor };
             })
           );
-          
+
           const followingSet = new Set(
-            followingStatuses
-              .filter(status => status.isFollowing)
-              .map(status => status.userId)
+            followingStatuses.filter(s => s.isFollowing).map(s => s.userId)
           );
           console.log('💜 Total following:', followingSet.size, 'users');
           setFollowingUsers(followingSet);
         }
-        
+
       } catch (error) {
         console.error('❌ Failed to load posts:', error);
         toast.error('Failed to load posts');
@@ -210,14 +202,14 @@ export default function HomePage() {
         const status = postQueue.getQueueStatus();
         setQueueStatus({ pending: status.pending, failed: status.failed });
         await postQueue.processQueue();
-        
+
         try {
           const fetchedPosts = await fetchPosts(10, 0);
           setPosts(fetchedPosts);
-          
+
           const newStatus = postQueue.getQueueStatus();
           setQueueStatus({ pending: newStatus.pending, failed: newStatus.failed });
-          
+
           if (newStatus.pending === 0 && status.pending > 0) {
             toast.success('All posts synced! 🎉');
           }
@@ -228,7 +220,7 @@ export default function HomePage() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     const interval = setInterval(() => {
       if (!document.hidden) {
         postQueue.processQueue();
@@ -246,7 +238,7 @@ export default function HomePage() {
     };
   }, []);
 
-  // ✅ Spotlight carousel
+  // ✅ Spotlight carousel auto-advance
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSpotlight((prev) => (prev + 1) % spotlightPosts.length);
@@ -257,28 +249,24 @@ export default function HomePage() {
   // ✅ Spotlight scroll sync
   useEffect(() => {
     if (spotlightRef.current) {
-      const scrollPosition = currentSpotlight * (spotlightRef.current as HTMLElement).offsetWidth;
-      (spotlightRef.current as HTMLElement).scrollTo({
-        left: scrollPosition,
-        behavior: 'smooth'
-      });
+      const el = spotlightRef.current as HTMLElement;
+      el.scrollTo({ left: currentSpotlight * el.offsetWidth, behavior: 'smooth' });
     }
   }, [currentSpotlight]);
 
   // ✅ Infinite scroll
   const loadMorePosts = useCallback(async () => {
     if (loading || !hasMore || activeTab !== 'feed') return;
-    
+
     setLoading(true);
     try {
       const morePosts = await fetchPosts(5, posts.length);
-      
+
       if (morePosts.length === 0) {
         setHasMore(false);
       } else {
         setPosts(prev => [...prev, ...morePosts]);
-        
-        // Load follow status for new authors
+
         const newAuthorIds = [...new Set(morePosts.map(p => p.user_id))];
         const followingStatuses = await Promise.all(
           newAuthorIds.map(async (authorId) => ({
@@ -286,13 +274,11 @@ export default function HomePage() {
             isFollowing: await checkIsFollowing(authorId)
           }))
         );
-        
+
         setFollowingUsers(prev => {
           const newSet = new Set(prev);
-          followingStatuses.forEach(status => {
-            if (status.isFollowing) {
-              newSet.add(status.userId);
-            }
+          followingStatuses.forEach(s => {
+            if (s.isFollowing) newSet.add(s.userId);
           });
           return newSet;
         });
@@ -314,21 +300,29 @@ export default function HomePage() {
       { threshold: 0.5 }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
+    if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
   }, [loadMorePosts, activeTab]);
 
-  // ✅ Click outside handlers
+  // ✅ FIX: Click-outside handler — uses data-post-menu attribute instead of broken shared ref
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Profile menu
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
       }
-      if (postMenuRef.current && !postMenuRef.current.contains(event.target as Node)) {
-        setShowPostMenu(null);
+
+      // ✅ Post menus — data attribute approach works for every post independently.
+      // The old postMenuRef was assigned inside .map() so it always pointed to
+      // the LAST rendered post, causing every other menu's outside-click to misfire.
+      const target = event.target as HTMLElement;
+      const clickedInsidePostMenu = target.closest('[data-post-menu]');
+      if (!clickedInsidePostMenu) {
+        // Only close if a menu is actually open (avoids noisy re-renders)
+        setShowPostMenu(prev => {
+          if (prev !== null) console.log('🖱️ Clicked outside post menu — closing menu for post:', prev);
+          return null;
+        });
       }
     };
 
@@ -336,38 +330,30 @@ export default function HomePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ✅ NEW: Handle follow/unfollow from post
+  // ✅ Follow/Unfollow from post
   const handleFollowFromPost = async (userId: string) => {
     if (!user || userId === user.id) return;
-    
+
     try {
       setFollowLoading(userId);
       console.log('🔄 Follow action for user:', userId);
-      
-      // followUser toggles the follow status
+
       const nowFollowing = await followUser(userId);
       console.log('✅ Follow result:', nowFollowing ? 'NOW FOLLOWING' : 'UNFOLLOWED');
-      
-      // Update local state
+
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         if (nowFollowing) {
           newSet.add(userId);
-          console.log('➕ Added to following set');
         } else {
           newSet.delete(userId);
-          console.log('➖ Removed from following set');
         }
-        console.log('📊 Total following:', newSet.size);
         return newSet;
       });
-      
-      // Show appropriate toast
-      if (nowFollowing) {
-        toast.success('Following! ✨', { icon: '🎉' });
-      } else {
-        toast.success('Unfollowed', { icon: '👋' });
-      }
+
+      toast.success(nowFollowing ? 'Following! ✨' : 'Unfollowed', {
+        icon: nowFollowing ? '🎉' : '👋'
+      });
     } catch (error) {
       console.error('❌ Failed to update follow status:', error);
       toast.error('Failed to update follow status');
@@ -386,7 +372,7 @@ export default function HomePage() {
     try {
       setIsSubmittingPost(true);
       console.log('📝 Creating post...');
-      
+
       const optimisticPost = await createPost({
         content: postContent,
         media_url: postMediaUrl || undefined,
@@ -394,12 +380,12 @@ export default function HomePage() {
       });
 
       setPosts(prev => [optimisticPost, ...prev]);
-      
+
       setPostContent('');
       setPostMediaUrl('');
       setPostMediaType(undefined);
       setShowCreateModal(false);
-      
+
       toast.success('Post created! Syncing... 🎉', { duration: 2000 });
 
       postQueue.processQueue().then(async () => {
@@ -407,7 +393,7 @@ export default function HomePage() {
           const fetchedPosts = await fetchPosts(10, 0);
           setPosts(fetchedPosts);
         } catch (error) {
-          console.error('❌ Failed to refresh:', error);
+          console.error('❌ Failed to refresh after post:', error);
         }
       });
 
@@ -422,20 +408,16 @@ export default function HomePage() {
   // ✅ LIKE POST
   const handleLikePost = async (postId: string) => {
     const isLiked = likedPosts.has(postId);
-    
+
     try {
       setLikedPosts(prev => {
         const newSet = new Set(prev);
-        if (isLiked) {
-          newSet.delete(postId);
-        } else {
-          newSet.add(postId);
-        }
+        isLiked ? newSet.delete(postId) : newSet.add(postId);
         return newSet;
       });
 
-      setPosts(prev => prev.map(post => 
-        post.id === postId 
+      setPosts(prev => prev.map(post =>
+        post.id === postId
           ? { ...post, likes: isLiked ? post.likes - 1 : post.likes + 1 }
           : post
       ));
@@ -444,61 +426,114 @@ export default function HomePage() {
     } catch (error) {
       console.error('❌ Failed to like post:', error);
       toast.error('Failed to like post');
-      
+
+      // Rollback
       setLikedPosts(prev => {
         const newSet = new Set(prev);
-        if (isLiked) {
-          newSet.add(postId);
-        } else {
-          newSet.delete(postId);
-        }
+        isLiked ? newSet.add(postId) : newSet.delete(postId);
         return newSet;
       });
-
-      setPosts(prev => prev.map(post => 
-        post.id === postId 
+      setPosts(prev => prev.map(post =>
+        post.id === postId
           ? { ...post, likes: isLiked ? post.likes + 1 : post.likes - 1 }
           : post
       ));
     }
   };
 
-  // ✅ DELETE POST
+  // ✅ DELETE POST — fully fixed
   const handleDeletePost = async (postId: string) => {
+    console.log('🗑️ handleDeletePost called — postId:', postId);
+    console.log('👤 Current user:', user?.id);
+
     if (!user) {
+      console.warn('❌ No user found — aborting delete');
       toast.error('You must be logged in');
       return;
     }
 
     const post = posts.find(p => p.id === postId);
+    console.log('📄 Found post:', post ? `id=${post.id}, user_id=${post.user_id}` : 'NOT FOUND in local state');
+
+    if (!post) {
+      console.warn('❌ Post not found in local state — postId:', postId);
+      toast.error('Post not found');
+      return;
+    }
+
+    // ✅ FIX: String-coerce both sides — Supabase UUID vs auth UID can have type mismatch
+    const postUserId = String(post.user_id).trim();
+    const currentUserId = String(user.id).trim();
+    console.log('🔐 Ownership check — post.user_id:', postUserId, '| user.id:', currentUserId, '| match:', postUserId === currentUserId);
+
+    if (postUserId !== currentUserId) {
+      console.warn('❌ Ownership mismatch — cannot delete this post');
+      toast.error('You can only delete your own posts');
+      return;
+    }
+
+    // ✅ FIX: Close the menu BEFORE confirm dialog opens.
+    // Old bug: mousedown event (which closes the menu) fired BEFORE onClick,
+    // so the menu was already unmounted when delete button's onClick ran.
+    setShowPostMenu(null);
+    console.log('📋 Post menu closed — waiting for re-render before confirm dialog...');
+
+    // Small delay so React can flush the menu-close re-render before confirm blocks the thread
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     const confirmed = window.confirm('Are you sure you want to delete this post?');
-    if (!confirmed) return;
+    console.log('❓ User confirmed delete:', confirmed);
+
+    if (!confirmed) {
+      console.log('🚫 Delete cancelled by user');
+      return;
+    }
+
+    console.log('⏳ Proceeding with Supabase delete for postId:', postId);
+
+    // Optimistic removal from UI
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    const loadingToast = toast.loading('Deleting post...');
 
     try {
-      setPosts(prev => prev.filter(p => p.id !== postId));
-      setShowPostMenu(null);
-      
-      const loadingToast = toast.loading('Deleting post...');
-      
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('posts')
-        .delete()
+        .delete({ count: 'exact' }) // ✅ count:'exact' detects silent RLS blocks
         .eq('id', postId)
         .eq('user_id', user.id);
-      
-      if (error) throw error;
-      
+
+      console.log('📡 Supabase delete response — error:', error, '| rows affected:', count);
+
+      if (error) {
+        console.error('❌ Supabase delete error:', error.message, '| code:', error.code, '| details:', error.details);
+        throw error;
+      }
+
+      if (count === 0) {
+        // Deleted 0 rows — RLS policy likely blocked it silently
+        console.warn('⚠️ Delete returned 0 rows — possible RLS policy block or post already deleted');
+        toast.error('Delete failed — check your Supabase RLS policy for posts table', { id: loadingToast });
+
+        // Restore UI since nothing was actually deleted
+        const fetchedPosts = await fetchPosts(10, 0);
+        setPosts(fetchedPosts);
+        return;
+      }
+
+      console.log('✅ Post deleted successfully — postId:', postId);
       toast.success('Post deleted!', { id: loadingToast });
-      
+
     } catch (error: any) {
-      console.error('❌ Failed to delete post:', error);
-      toast.error(error.message || 'Failed to delete post');
-      
+      console.error('❌ handleDeletePost threw an error:', error);
+      toast.error(error.message || 'Failed to delete post', { id: loadingToast });
+
+      // Restore optimistic removal
       try {
         const fetchedPosts = await fetchPosts(10, 0);
         setPosts(fetchedPosts);
+        console.log('🔄 Posts restored after failed delete');
       } catch (e) {
-        console.error('❌ Failed to reload posts:', e);
+        console.error('❌ Failed to restore posts after error:', e);
       }
     }
   };
@@ -519,7 +554,7 @@ export default function HomePage() {
     }
 
     setShowComments(postId);
-    
+
     if (!comments[postId]) {
       try {
         setLoadingComments(postId);
@@ -540,16 +575,14 @@ export default function HomePage() {
 
     try {
       const newComment = await createComment(postId, commentText);
-      
+
       setComments(prev => ({
         ...prev,
         [postId]: [newComment, ...(prev[postId] || [])]
       }));
 
       setPosts(prev => prev.map(post =>
-        post.id === postId
-          ? { ...post, comments_count: post.comments_count + 1 }
-          : post
+        post.id === postId ? { ...post, comments_count: post.comments_count + 1 } : post
       ));
 
       setCommentText('');
@@ -606,7 +639,6 @@ export default function HomePage() {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
     if (diffHours < 1) return 'Just now';
     if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
@@ -621,7 +653,7 @@ export default function HomePage() {
     return count.toString();
   };
 
-  // ✅ REAL USER DATA (from auth context)
+  // ✅ REAL USER DATA
   const userData = {
     username: user?.username || 'User',
     email: user?.email || '',
@@ -635,11 +667,9 @@ export default function HomePage() {
     isPremium: user?.ispremium || false
   };
 
-  // ✅ Calculate XP progress (example: level * 100 XP needed)
-  const currentXP = ((user?.level || 1) * 500) * 0.65; // 65% progress example
+  const currentXP = ((user?.level || 1) * 500) * 0.65;
   const nextLevelXP = ((user?.level || 1) + 1) * 500;
 
-  // ✅ UI CONFIGURATION
   const filterChips = [
     { id: 'foryou', label: 'For You', icon: FaFire },
     { id: 'following', label: 'Following', icon: FaUsers },
@@ -713,7 +743,7 @@ export default function HomePage() {
       {queueStatus.failed > 0 && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-red-600/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-3 shadow-lg">
           <span>{queueStatus.failed} post{queueStatus.failed > 1 ? 's' : ''} failed</span>
-          <button 
+          <button
             onClick={() => postQueue.retryFailed()}
             className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full text-xs font-bold transition-all"
           >
@@ -738,25 +768,27 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={() => setShowExplore(!showExplore)}
               className={`p-2 rounded-lg transition-all ${
-                showExplore 
+                showExplore
                   ? 'bg-purple-600 text-white'
-                  : darkMode 
-                    ? 'text-gray-400 hover:text-purple-500 hover:bg-gray-900' 
+                  : darkMode
+                    ? 'text-gray-400 hover:text-purple-500 hover:bg-gray-900'
                     : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100'
               }`}
             >
               <FaSearch className="text-lg" />
             </button>
+
             <button className={`p-2 rounded-lg transition-all relative ${
               darkMode ? 'text-gray-400 hover:text-purple-500 hover:bg-gray-900' : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100'
             }`}>
               <FaBell className="text-lg" />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-purple-600 rounded-full"></span>
             </button>
-            <button 
+
+            <button
               onClick={() => setDarkMode(!darkMode)}
               className={`p-2 rounded-lg transition-all ${
                 darkMode ? 'text-gray-400 hover:text-purple-500 hover:bg-gray-900' : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100'
@@ -764,20 +796,19 @@ export default function HomePage() {
             >
               {darkMode ? <FaSun className="text-lg" /> : <FaMoon className="text-lg" />}
             </button>
-            
+
             <div className="relative" ref={profileMenuRef}>
-              <button 
+              <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-gray-900/50 transition-all"
               >
-                <img 
-                  src={userData.photoURL} 
+                <img
+                  src={userData.photoURL}
                   alt={userData.username}
                   className="w-8 h-8 rounded-full border-2 border-purple-600/50"
                 />
               </button>
 
-              {/* Profile Menu */}
               {showProfileMenu && (
                 <div className={`absolute right-0 mt-2 w-80 rounded-2xl border shadow-2xl overflow-hidden z-50 ${
                   darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
@@ -785,8 +816,8 @@ export default function HomePage() {
                   <div className="relative p-6 bg-gradient-to-br from-purple-600 to-violet-600">
                     <div className="flex items-start space-x-4">
                       <div className="relative">
-                        <img 
-                          src={userData.photoURL} 
+                        <img
+                          src={userData.photoURL}
                           alt={userData.username}
                           className="w-16 h-16 rounded-full border-3 border-white shadow-lg"
                         />
@@ -815,31 +846,22 @@ export default function HomePage() {
 
                   <div className={`grid grid-cols-3 gap-4 p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                     <div className="text-center">
-                      <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {userData.posts}
-                      </div>
+                      <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{userData.posts}</div>
                       <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>Posts</div>
                     </div>
                     <div className="text-center">
-                      <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {formatCount(userData.followers)}
-                      </div>
+                      <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatCount(userData.followers)}</div>
                       <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>Followers</div>
                     </div>
                     <div className="text-center">
-                      <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {formatCount(userData.following)}
-                      </div>
+                      <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{formatCount(userData.following)}</div>
                       <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>Following</div>
                     </div>
                   </div>
 
                   <div className="p-2">
-                    <button 
-                      onClick={() => {
-                        setActiveTab('profile');
-                        setShowProfileMenu(false);
-                      }}
+                    <button
+                      onClick={() => { setActiveTab('profile'); setShowProfileMenu(false); }}
                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                         darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
                       }`}
@@ -847,22 +869,17 @@ export default function HomePage() {
                       <FaUser className="text-lg" />
                       <span className="font-medium">View Profile</span>
                     </button>
-                    <button 
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
-                        darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
-                      }`}
-                    >
+                    <button className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
+                      darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
+                    }`}>
                       <FaBookmark className="text-lg" />
                       <span className="font-medium">Saved Posts</span>
                     </button>
                   </div>
 
                   <div className={`p-2 border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-                    <button 
-                      onClick={() => {
-                        handleLogout();
-                        setShowProfileMenu(false);
-                      }}
+                    <button
+                      onClick={() => { handleLogout(); setShowProfileMenu(false); }}
                       className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-red-500 hover:bg-red-500/10 font-medium"
                     >
                       <FaSignOutAlt className="text-lg" />
@@ -881,17 +898,12 @@ export default function HomePage() {
         <aside className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 backdrop-blur-md border-r p-5 overflow-y-auto hidden lg:flex lg:flex-col transition-colors ${
           darkMode ? 'bg-black/95 border-gray-800' : 'bg-white/95 border-gray-200'
         }`}>
-          {/* ✅ REAL USER DATA IN SIDEBAR */}
           <div className={`mb-6 p-4 rounded-xl border transition-colors ${
             darkMode ? 'bg-gradient-to-br from-gray-900 to-black border-purple-900/30' : 'bg-gradient-to-br from-purple-50 to-white border-purple-200/50'
           }`}>
             <div className="flex items-center space-x-3 mb-3">
               <div className="relative">
-                <img
-                  src={userData.photoURL}
-                  alt="User"
-                  className="w-11 h-11 rounded-full border-2 border-purple-600/50"
-                />
+                <img src={userData.photoURL} alt="User" className="w-11 h-11 rounded-full border-2 border-purple-600/50" />
                 {userData.isPremium && (
                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center border-2 border-black">
                     <FaStar className="text-white text-[8px]" />
@@ -918,14 +930,11 @@ export default function HomePage() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setShowExplore(false);
-                  }}
+                  onClick={() => { setActiveTab(item.id); setShowExplore(false); }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive 
-                      ? darkMode 
-                        ? 'bg-purple-600/10 text-purple-500 border-l-2 border-purple-600' 
+                    isActive
+                      ? darkMode
+                        ? 'bg-purple-600/10 text-purple-500 border-l-2 border-purple-600'
                         : 'bg-purple-100 text-purple-700 border-l-2 border-purple-600'
                       : darkMode
                         ? 'text-gray-500 hover:text-white hover:bg-gray-900'
@@ -939,10 +948,10 @@ export default function HomePage() {
             })}
           </nav>
 
-          <button 
+          <button
             onClick={handleLogout}
             className={`w-full mt-4 font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all border ${
-              darkMode 
+              darkMode
                 ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/5 border-gray-800 hover:border-red-500/20'
                 : 'text-gray-600 hover:text-red-600 hover:bg-red-50 border-gray-200 hover:border-red-200'
             }`}
@@ -954,12 +963,13 @@ export default function HomePage() {
 
         {/* Main Content */}
         <main className="flex-1 lg:ml-64 px-5 py-6 max-w-4xl mx-auto pb-20 lg:pb-6 relative z-10">
+
           {/* GALLERY TAB */}
           {activeTab === 'gallery' ? (
             <GalleryPage darkMode={darkMode} />
+
           ) : showExplore ? (
-            /* EXPLORE PAGE */
-            <ExplorePage 
+            <ExplorePage
               darkMode={darkMode}
               onUserClick={(userId) => {
                 console.log('Navigate to user:', userId);
@@ -971,8 +981,8 @@ export default function HomePage() {
                 setShowExplore(false);
               }}
             />
+
           ) : activeTab === 'feed' ? (
-            /* FEED TAB */
             <>
               {refreshing && (
                 <div className="flex justify-center mb-4">
@@ -993,8 +1003,8 @@ export default function HomePage() {
                         key={index}
                         onClick={() => setCurrentSpotlight(index)}
                         className={`h-1.5 rounded-full transition-all ${
-                          currentSpotlight === index 
-                            ? 'w-6 bg-purple-600' 
+                          currentSpotlight === index
+                            ? 'w-6 bg-purple-600'
                             : darkMode ? 'w-1.5 bg-gray-700' : 'w-1.5 bg-gray-300'
                         }`}
                       />
@@ -1003,38 +1013,22 @@ export default function HomePage() {
                 </div>
 
                 <div className="relative group">
-                  <div 
-                    ref={spotlightRef}
-                    className="flex overflow-x-hidden snap-x snap-mandatory scroll-smooth"
-                  >
+                  <div ref={spotlightRef} className="flex overflow-x-hidden snap-x snap-mandatory scroll-smooth">
                     {spotlightPosts.map((spotlight) => (
-                      <div
-                        key={spotlight.id}
-                        className="w-full flex-shrink-0 snap-center"
-                      >
+                      <div key={spotlight.id} className="w-full flex-shrink-0 snap-center">
                         <div className={`relative rounded-2xl overflow-hidden border cursor-pointer transition-all ${
                           darkMode ? 'border-gray-800 hover:border-purple-600/50' : 'border-gray-200 hover:border-purple-400'
                         }`}>
-                          <img 
-                            src={spotlight.image} 
-                            alt={spotlight.title}
-                            className="w-full h-64 object-cover"
-                          />
+                          <img src={spotlight.image} alt={spotlight.title} className="w-full h-64 object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                           <div className="absolute top-4 left-4">
-                            <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                              {spotlight.badge}
-                            </span>
+                            <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">{spotlight.badge}</span>
                           </div>
                           <div className="absolute bottom-0 left-0 right-0 p-6">
                             <h3 className="text-white text-xl font-bold mb-2">{spotlight.title}</h3>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2">
-                                <img 
-                                  src={`https://i.pravatar.cc/40?u=${spotlight.author}`}
-                                  alt={spotlight.author}
-                                  className="w-6 h-6 rounded-full border-2 border-white/50"
-                                />
+                                <img src={`https://i.pravatar.cc/40?u=${spotlight.author}`} alt={spotlight.author} className="w-6 h-6 rounded-full border-2 border-white/50" />
                                 <span className="text-white/90 text-sm font-medium">{spotlight.author}</span>
                               </div>
                               <div className="flex items-center space-x-1 text-white/80 text-sm">
@@ -1094,14 +1088,14 @@ export default function HomePage() {
               <div className="space-y-5">
                 {posts.map((post) => {
                   const isOptimistic = post.id.startsWith('optimistic_');
-                  const isOwnPost = post.user_id === user?.id;
+                  const isOwnPost = user && String(post.user_id).trim() === String(user.id).trim();
                   const isFollowingAuthor = followingUsers.has(post.user_id);
-                  
+
                   return (
-                    <article 
+                    <article
                       key={post.id}
                       className={`rounded-2xl overflow-hidden border transition-all ${
-                        darkMode 
+                        darkMode
                           ? 'bg-gray-900 border-gray-800 hover:border-purple-900/50'
                           : 'bg-white border-gray-200 hover:border-purple-300'
                       } ${isOptimistic ? 'opacity-70' : ''}`}
@@ -1114,8 +1108,8 @@ export default function HomePage() {
                           </div>
                         </div>
                       )}
-                      
-                      {/* POST HEADER WITH FOLLOW BUTTON */}
+
+                      {/* POST HEADER */}
                       <div className="p-5 flex items-center justify-between">
                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                           <div className="relative">
@@ -1124,10 +1118,8 @@ export default function HomePage() {
                               alt={post.author?.username || 'User'}
                               className={`w-11 h-11 rounded-full border ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}
                             />
-                            {post.author?.ispremium && (
-                              <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center border-2 ${
-                                darkMode ? 'border-gray-900' : 'border-white'
-                              }`}>
+                            {post.author?.isPremium && (
+                              <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center border-2 ${darkMode ? 'border-gray-900' : 'border-white'}`}>
                                 <FaStar className="text-white text-[7px]" />
                               </div>
                             )}
@@ -1148,16 +1140,14 @@ export default function HomePage() {
                               </span>
                             </div>
                           </div>
-                          
-                          {/* ✅ FOLLOW BUTTON ON POST */}
+
+                          {/* FOLLOW BUTTON */}
                           {!isOwnPost && !isOptimistic && (
                             <button
                               onClick={() => handleFollowFromPost(post.user_id)}
                               disabled={followLoading === post.user_id}
                               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                                followLoading === post.user_id
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : ''
+                                followLoading === post.user_id ? 'opacity-50 cursor-not-allowed' : ''
                               } ${
                                 isFollowingAuthor
                                   ? darkMode
@@ -1176,13 +1166,20 @@ export default function HomePage() {
                             </button>
                           )}
                         </div>
-                        
-                        {/* POST MENU */}
-                        <div className="relative ml-2" ref={postMenuRef}>
-                          <button 
-                            onClick={() => setShowPostMenu(showPostMenu === post.id ? null : post.id)}
+
+                        {/* ✅ FIX: data-post-menu replaces ref={postMenuRef}
+                            The old ref was shared across ALL posts in .map() and always
+                            pointed to the LAST rendered post's DOM node, causing the
+                            click-outside handler to misfire and swallow the delete click. */}
+                        <div className="relative ml-2" data-post-menu>
+                          <button
+                            onClick={() => {
+                              const next = showPostMenu === post.id ? null : post.id;
+                              console.log('📂 Post menu toggle — postId:', post.id, '| opening:', next !== null);
+                              setShowPostMenu(next);
+                            }}
                             className={`p-2 rounded-lg transition-all ${
-                              darkMode 
+                              darkMode
                                 ? 'text-gray-600 hover:text-gray-400 hover:bg-gray-800'
                                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                             }`}
@@ -1203,10 +1200,13 @@ export default function HomePage() {
                                 <FaLink className="text-sm" />
                                 <span className="font-medium text-sm">Copy Link</span>
                               </button>
-                              
+
                               {isOwnPost && !isOptimistic && (
                                 <button
-                                  onClick={() => handleDeletePost(post.id)}
+                                  onClick={() => {
+                                    console.log('🔴 Delete button clicked — postId:', post.id, '| isOwnPost:', isOwnPost);
+                                    handleDeletePost(post.id);
+                                  }}
                                   className="w-full flex items-center space-x-3 px-4 py-3 transition-all text-red-500 hover:bg-red-500/10"
                                 >
                                   <FaTrash className="text-sm" />
@@ -1227,52 +1227,46 @@ export default function HomePage() {
 
                       {/* Post Media */}
                       {post.media_url && (
-                        <div className={`relative group ${darkMode ? 'bg-black' : 'bg-gray-100'}`}>
-                          {post.media_type === 'video' ? (
-                            <div className="relative">
-                              <img 
-                                src={post.media_url} 
-                                alt="Video thumbnail" 
-                                className="w-full h-auto" 
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                                <button className="bg-purple-600 hover:bg-purple-700 rounded-full p-4 transition-all shadow-lg shadow-purple-500/50">
-                                  <FaPlay className="text-white text-xl ml-0.5" />
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <img 
-                              src={post.media_url} 
-                              alt="Post media" 
-                              className="w-full h-auto" 
-                            />
-                          )}
-                        </div>
-                      )}
+  <div className={`relative ${darkMode ? 'bg-black' : 'bg-gray-100'}`}>
+    {post.media_type === 'video' ? (
+      <video 
+        src={post.media_url}
+        controls
+        preload="metadata"
+        className="w-full max-h-[600px] object-contain bg-black"
+      >
+        Your browser does not support video playback.
+      </video>
+    ) : (
+      <img 
+        src={post.media_url} 
+        alt="Post media" 
+        className="w-full h-auto" 
+      />
+    )}
+  </div>
+)}
 
                       {/* POST ACTIONS */}
                       <div className="p-5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-6">
-                            <button 
+                            <button
                               onClick={() => !isOptimistic && handleLikePost(post.id)}
                               disabled={isOptimistic}
                               className={`flex items-center space-x-2 transition-all ${
                                 isOptimistic ? 'opacity-50 cursor-not-allowed' : ''
                               } ${
-                                likedPosts.has(post.id) 
-                                  ? 'text-purple-600' 
+                                likedPosts.has(post.id)
+                                  ? 'text-purple-600'
                                   : darkMode ? 'text-gray-600 hover:text-purple-500' : 'text-gray-500 hover:text-purple-600'
                               }`}
                             >
                               <FaHeart className={`text-lg ${likedPosts.has(post.id) ? 'fill-current' : ''}`} />
-                              <span className="font-semibold text-sm">
-                                {formatCount(post.likes)}
-                              </span>
+                              <span className="font-semibold text-sm">{formatCount(post.likes)}</span>
                             </button>
-                            
-                            <button 
+
+                            <button
                               onClick={() => !isOptimistic && handleToggleComments(post.id)}
                               disabled={isOptimistic}
                               className={`flex items-center space-x-2 transition-all ${
@@ -1284,12 +1278,10 @@ export default function HomePage() {
                               }`}
                             >
                               <FaComment className="text-lg" />
-                              <span className="font-semibold text-sm">
-                                {formatCount(post.comments_count)}
-                              </span>
+                              <span className="font-semibold text-sm">{formatCount(post.comments_count)}</span>
                             </button>
-                            
-                            <button 
+
+                            <button
                               onClick={() => !isOptimistic && handleSharePost(post.id)}
                               disabled={isOptimistic}
                               className={`flex items-center space-x-2 transition-all ${
@@ -1299,19 +1291,18 @@ export default function HomePage() {
                               }`}
                             >
                               <FaPaperPlane className="text-lg" />
-                              <span className="font-semibold text-sm">
-                                {formatCount(post.shares)}
-                              </span>
+                              <span className="font-semibold text-sm">{formatCount(post.shares)}</span>
                             </button>
                           </div>
-                          <button 
+
+                          <button
                             onClick={() => !isOptimistic && toggleSave(post.id)}
                             disabled={isOptimistic}
                             className={`transition-all ${
                               isOptimistic ? 'opacity-50 cursor-not-allowed' : ''
                             } ${
-                              savedPosts.has(post.id) 
-                                ? 'text-purple-600' 
+                              savedPosts.has(post.id)
+                                ? 'text-purple-600'
                                 : darkMode ? 'text-gray-600 hover:text-purple-500' : 'text-gray-500 hover:text-purple-600'
                             }`}
                           >
@@ -1323,13 +1314,8 @@ export default function HomePage() {
                       {/* COMMENTS SECTION */}
                       {showComments === post.id && (
                         <div className={`border-t px-5 py-4 ${darkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50/50'}`}>
-                          {/* Add Comment */}
                           <div className="flex items-start space-x-3 mb-4">
-                            <img
-                              src={userData.photoURL}
-                              alt={userData.username}
-                              className="w-8 h-8 rounded-full"
-                            />
+                            <img src={userData.photoURL} alt={userData.username} className="w-8 h-8 rounded-full" />
                             <div className="flex-1">
                               <textarea
                                 value={commentText}
@@ -1354,7 +1340,6 @@ export default function HomePage() {
                             </div>
                           </div>
 
-                          {/* Comments List */}
                           {loadingComments === post.id ? (
                             <div className="flex justify-center py-4">
                               <div className="animate-spin rounded-full h-6 w-6 border-2 border-purple-600 border-t-transparent"></div>
@@ -1385,7 +1370,7 @@ export default function HomePage() {
                                   </div>
                                 </div>
                               ))}
-                              
+
                               {comments[post.id]?.length === 0 && (
                                 <p className={`text-center text-sm py-4 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
                                   No comments yet. Be the first to comment!
@@ -1399,22 +1384,14 @@ export default function HomePage() {
                   );
                 })}
 
-                {loading && (
-                  <>
-                    <SkeletonPost />
-                    <SkeletonPost />
-                  </>
-                )}
+                {loading && <><SkeletonPost /><SkeletonPost /></>}
 
                 <div ref={observerTarget} className="h-10" />
 
                 {!hasMore && posts.length > 0 && (
                   <div className="text-center py-8">
                     <p className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>You're all caught up! ✨</p>
-                    <button 
-                      onClick={handleRefresh}
-                      className="mt-4 text-purple-600 hover:text-purple-700 text-sm font-medium transition-colors"
-                    >
+                    <button onClick={handleRefresh} className="mt-4 text-purple-600 hover:text-purple-700 text-sm font-medium transition-colors">
                       Refresh Feed
                     </button>
                   </div>
@@ -1423,35 +1400,29 @@ export default function HomePage() {
                 {posts.length === 0 && !loading && (
                   <div className="text-center py-16">
                     <FaFire className={`text-6xl mx-auto mb-4 ${darkMode ? 'text-gray-800' : 'text-gray-300'}`} />
-                    <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      No posts yet
-                    </h3>
-                    <p className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
-                      Be the first to create a post!
-                    </p>
+                    <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>No posts yet</h3>
+                    <p className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>Be the first to create a post!</p>
                   </div>
                 )}
               </div>
             </>
+
           ) : activeTab === 'profile' ? (
-            /* PROFILE TAB */
             <ProfilePage darkMode={darkMode} userId={user?.id} />
+
           ) : (
-            /* OTHER TABS */
             <div className="text-center py-16">
               <h2 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
               </h2>
-              <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                Coming Soon!
-              </p>
+              <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>Coming Soon!</p>
             </div>
           )}
         </main>
       </div>
 
       {/* Create Post FAB */}
-      <button 
+      <button
         onClick={() => setShowCreateModal(true)}
         className="fixed bottom-20 lg:bottom-8 right-8 bg-gradient-to-br from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white p-4 rounded-2xl shadow-2xl shadow-purple-500/40 transition-all hover:scale-105 z-40"
       >
@@ -1466,7 +1437,7 @@ export default function HomePage() {
           }`}>
             <div className="flex items-center justify-between mb-5">
               <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Create Post</h2>
-              <button 
+              <button
                 onClick={() => setShowCreateModal(false)}
                 className={`p-2 rounded-lg transition-all ${
                   darkMode ? 'text-gray-600 hover:text-gray-400 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
@@ -1475,13 +1446,13 @@ export default function HomePage() {
                 <FaTimes className="text-lg" />
               </button>
             </div>
-            
-            <textarea 
+
+            <textarea
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               placeholder="Share something with the community..."
               className={`w-full h-32 p-4 border rounded-xl focus:outline-none resize-none text-sm transition-all ${
-                darkMode 
+                darkMode
                   ? 'bg-black border-gray-800 text-white placeholder-gray-600 focus:border-purple-600/50'
                   : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:border-purple-400'
               }`}
@@ -1501,21 +1472,19 @@ export default function HomePage() {
                 darkMode={darkMode}
               />
             </div>
-            
+
             <div className="flex items-center justify-end mt-5">
-              <button 
+              <button
                 onClick={handleCreatePost}
                 disabled={isSubmittingPost || !postContent.trim()}
-                className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-purple-600 disabled:hover:to-violet-600"
+                className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmittingPost ? (
                   <span className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                     Posting...
                   </span>
-                ) : (
-                  'Post'
-                )}
+                ) : 'Post'}
               </button>
             </div>
           </div>
@@ -1531,16 +1500,11 @@ export default function HomePage() {
             const Icon = item.icon;
             const isActive = item.id === activeTab;
             return (
-              <button 
-                key={item.id} 
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setShowExplore(false);
-                }}
+              <button
+                key={item.id}
+                onClick={() => { setActiveTab(item.id); setShowExplore(false); }}
                 className={`flex flex-col items-center p-2 transition-colors ${
-                  isActive 
-                    ? 'text-purple-600' 
-                    : darkMode ? 'text-gray-600' : 'text-gray-500'
+                  isActive ? 'text-purple-600' : darkMode ? 'text-gray-600' : 'text-gray-500'
                 }`}
               >
                 <Icon className="text-xl" />

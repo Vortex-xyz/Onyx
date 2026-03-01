@@ -1,4 +1,4 @@
-// src/pages/AuthCallback.tsx - PRODUCTION FIXED FOR YOUR EXACT SCHEMA
+// src/pages/AuthCallback.tsx - FIXED WITHOUT INTERESTS COLUMN
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../config/supabaseClient';
@@ -21,56 +21,77 @@ export const AuthCallback: React.FC = () => {
 
   useEffect(() => {
     console.log('═══════════════════════════════════════');
-    console.log('🎯 AUTH CALLBACK - PRODUCTION VERSION');
+    console.log('🎯 AUTH CALLBACK COMPONENT MOUNTED!');
     console.log('═══════════════════════════════════════');
     
-    log('AuthCallback mounted');
+    log('AuthCallback component mounted');
+    log(`Current pathname: ${location.pathname}`);
+    log(`Full URL: ${window.location.href}`);
+    log(`Hash: ${window.location.hash}`);
+    log(`Search params: ${window.location.search}`);
 
     const handleCallback = async () => {
       try {
-        log('STEP 1: Getting session...');
+        log('STEP 1: Getting session from Supabase...');
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
           log(`Session error: ${sessionError.message}`, true);
           setStatus('error');
-          toast.error('Authentication failed');
+          toast.error('Session error: ' + sessionError.message);
+          log('Redirecting to login in 3 seconds...');
           setTimeout(() => navigate('/login'), 3000);
           return;
         }
 
+        log('Session response received');
+        log(`Has session: ${!!sessionData.session}`);
+
         if (!sessionData.session) {
-          log('No session, trying code exchange...');
+          log('No session found in getSession()', true);
+          log('Attempting to exchange code for session...');
+
           const urlParams = new URLSearchParams(window.location.search);
           const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+          
           const code = urlParams.get('code') || hashParams.get('code');
+          log(`Auth code present: ${!!code}`);
 
           if (!code) {
-            log('No auth code found', true);
+            log('No auth code found in URL', true);
             setStatus('error');
-            toast.error('No authentication code');
+            toast.error('No authentication code found');
+            log('Redirecting to login in 3 seconds...');
             setTimeout(() => navigate('/login'), 3000);
             return;
           }
 
-          const { error: codeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (codeError) {
-            log(`Code exchange failed: ${codeError.message}`, true);
+          log(`Exchanging code for session: ${code.substring(0, 10)}...`);
+          const { data: codeExchangeData, error: codeExchangeError } = 
+            await supabase.auth.exchangeCodeForSession(code);
+
+          if (codeExchangeError) {
+            log(`Code exchange failed: ${codeExchangeError.message}`, true);
             setStatus('error');
-            toast.error('Authentication failed');
+            toast.error('Failed to authenticate');
+            log('Redirecting to login in 3 seconds...');
             setTimeout(() => navigate('/login'), 3000);
             return;
           }
+
+          log('✅ Code exchange successful!');
+          log(`User email: ${codeExchangeData.session?.user?.email}`);
         }
 
         log('STEP 2: Getting final session...');
-        const { data: finalData } = await supabase.auth.getSession();
-        const session = finalData.session;
+        const { data: finalSessionData } = await supabase.auth.getSession();
+        const session = finalSessionData.session;
 
         if (!session) {
-          log('No session after exchange', true);
+          log('No session after all attempts', true);
           setStatus('error');
-          toast.error('Session error');
+          toast.error('Authentication failed');
+          log('Redirecting to login in 3 seconds...');
           setTimeout(() => navigate('/login'), 3000);
           return;
         }
@@ -80,11 +101,13 @@ export const AuthCallback: React.FC = () => {
         const userName = session.user.user_metadata?.name || session.user.user_metadata?.full_name;
         const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
 
-        log(`✅ Authenticated: ${userEmail}`);
-        log(`Google name: ${userName || 'Not provided'}`);
-        log(`Google avatar: ${avatarUrl ? 'Yes' : 'No'}`);
+        log(`✅ AUTHENTICATED!`);
+        log(`User ID: ${userId}`);
+        log(`Email: ${userEmail}`);
+        log(`Name: ${userName || 'Not provided'}`);
+        log(`Avatar: ${avatarUrl ? 'Yes' : 'No'}`);
 
-        log('STEP 3: Checking database for user profile...');
+        log('STEP 3: Checking for user profile in database...');
         const { data: profile, error: profileError } = await supabase
           .from('users')
           .select('*')
@@ -93,17 +116,18 @@ export const AuthCallback: React.FC = () => {
 
         if (profileError) {
           if (profileError.code === 'PGRST116') {
-            log('Profile not found - NEW USER - Creating profile...');
+            log('Profile not found - this is a new user');
+            log('STEP 4: Creating new profile...');
 
-            const newUsername = userName || userEmail?.split('@')[0] || `user_${userId.substring(0, 8)}`;
-            log(`Using username: ${newUsername}`);
-            log(`Using avatar: ${avatarUrl || 'dicebear fallback'}`);
+            // ✅ FIXED: Use name from Google, fallback to email username
+            // ✅ CRITICAL FIX: Use temp username so user can choose their own in ProfileSetup
+            const newUsername = `temp_${userId.substring(0, 8)}`;
+            log(`Generated TEMP username: ${newUsername} (user will choose real name in profile setup)`);
 
-            // ✅ CRITICAL: Insert with YOUR EXACT SCHEMA
             const newProfile = {
               id: userId,
               email: userEmail,
-              username: newUsername,
+              username: newUsername, // ✅ Temp username - user will set real one in ProfileSetup
               avatar_url: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${newUsername}`,
               level: 1,
               ispremium: false,
@@ -111,84 +135,81 @@ export const AuthCallback: React.FC = () => {
               location: '',
               website: '',
               favorite_anime: [],
-              interests: [],
-              // ✅ Using _count columns (your schema has both old and new)
+              // ❌ REMOVED: interests field (column doesn't exist)
               followers_count: 0,
               following_count: 0,
               posts_count: 0,
-              // Also set old columns to 0 for consistency
-              followers: 0,
-              following: 0,
-              posts: 0,
               profile_completed: false,
             };
 
-            log('Inserting profile with data:');
-            log(JSON.stringify(newProfile, null, 2));
-
-            const { data: insertedProfile, error: insertError } = await supabase
+            log('Inserting profile into database...');
+            const { error: insertError } = await supabase
               .from('users')
-              .insert(newProfile)
-              .select()
-              .single();
+              .insert(newProfile);
 
             if (insertError) {
-              log(`❌ INSERT FAILED: ${insertError.message}`, true);
-              log(`Error code: ${insertError.code}`, true);
-              log(`Error details: ${insertError.details}`, true);
-              log(`Error hint: ${insertError.hint}`, true);
-              
+              log(`Profile creation failed: ${insertError.message}`, true);
+              log(`Error code: ${insertError.code}`);
               setStatus('error');
-              toast.error(`Failed to create profile: ${insertError.message}`);
-              
-              // Show full error in console for debugging
-              console.error('Full insert error:', insertError);
-              
-              setTimeout(() => navigate('/login'), 5000);
+              toast.error('Failed to create profile: ' + insertError.message);
+              log('Redirecting to login in 3 seconds...');
+              setTimeout(() => navigate('/login'), 3000);
               return;
             }
 
             log('✅ Profile created successfully!');
-            log(`Profile data: ${JSON.stringify(insertedProfile)}`);
-            
+            log('Profile needs completion');
             setStatus('success');
-            toast.success('Welcome to Onyx! Complete your profile 🎉');
-            
+            toast.success('Account created! Complete your profile 🎉');
+            log('Redirecting to /profile-setup in 2 seconds...');
             setTimeout(() => {
-              log('Navigating to profile setup...');
+              log('Navigating to /profile-setup...');
               navigate('/profile-setup', { replace: true });
             }, 2000);
             return;
           }
 
-          // Other database errors
           log(`Profile fetch error: ${profileError.message}`, true);
+          log(`Error code: ${profileError.code}`);
           setStatus('error');
-          toast.error('Database error');
+          toast.error('Profile error: ' + profileError.message);
+          log('Redirecting to login in 3 seconds...');
           setTimeout(() => navigate('/login'), 3000);
           return;
         }
 
-        log(`✅ Profile found: ${profile.username}`);
+        log(`✅ Profile found!`);
+        log(`Username: ${profile.username}`);
         log(`Profile completed: ${profile.profile_completed}`);
+        log(`Level: ${profile.level}`);
 
         if (!profile.profile_completed) {
-          log('Profile incomplete - redirecting to setup');
+          log('Profile incomplete - needs setup');
           setStatus('success');
-          toast.success('Complete your profile 🎨');
-          setTimeout(() => navigate('/profile-setup', { replace: true }), 2000);
+          toast.success('Welcome! Complete your profile 🎨');
+          log('Redirecting to /profile-setup in 2 seconds...');
+          setTimeout(() => {
+            log('Navigating to /profile-setup...');
+            navigate('/profile-setup', { replace: true });
+          }, 2000);
         } else {
-          log('Profile complete - redirecting to home');
+          log('Profile complete - user is ready');
           setStatus('success');
           toast.success(`Welcome back, ${profile.username}! 🎉`);
-          setTimeout(() => navigate('/home', { replace: true }), 2000);
+          log('Redirecting to /home in 2 seconds...');
+          setTimeout(() => {
+            log('Navigating to /home...');
+            navigate('/home', { replace: true });
+          }, 2000);
         }
 
       } catch (error: any) {
         log(`💥 UNEXPECTED ERROR: ${error.message}`, true);
-        console.error('Full error:', error);
+        log(`Error name: ${error.name}`);
+        log(`Stack trace: ${error.stack}`);
         setStatus('error');
-        toast.error('Unexpected error');
+        toast.error('Unexpected error: ' + error.message);
+        log('Redirecting to login in 3 seconds...');
         setTimeout(() => navigate('/login'), 3000);
       }
     };
@@ -204,7 +225,9 @@ export const AuthCallback: React.FC = () => {
             <>
               <div className="absolute inset-0 rounded-full border-4 border-purple-600/20 animate-pulse"></div>
               <div className="absolute inset-0 rounded-full border-4 border-purple-600 border-t-transparent animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center text-4xl">⏳</div>
+              <div className="absolute inset-0 flex items-center justify-center text-4xl">
+                ⏳
+              </div>
             </>
           )}
           {status === 'success' && (
@@ -220,14 +243,14 @@ export const AuthCallback: React.FC = () => {
         </div>
         
         <h1 className="text-3xl font-bold text-white mb-3">
-          {status === 'processing' && 'Processing Login...'}
+          {status === 'processing' && 'Processing Google Login...'}
           {status === 'success' && 'Success!'}
-          {status === 'error' && 'Error'}
+          {status === 'error' && 'Authentication Error'}
         </h1>
         
         <p className="text-gray-300 text-lg">
           {status === 'processing' && 'Setting up your account...'}
-          {status === 'success' && 'Redirecting...'}
+          {status === 'success' && 'Redirecting you now...'}
           {status === 'error' && 'Something went wrong'}
         </p>
       </div>
@@ -270,14 +293,14 @@ export const AuthCallback: React.FC = () => {
           
           {logs.length === 0 && (
             <div className="text-center text-gray-600 italic py-8">
-              Initializing...
+              Initializing debug console...
             </div>
           )}
         </div>
       </div>
 
       <div className="mt-6 text-center text-gray-500 text-sm">
-        <p>💡 Check console (F12) for detailed error logs</p>
+        <p>💡 Tip: Open browser console (F12) for additional technical details</p>
       </div>
     </div>
   );

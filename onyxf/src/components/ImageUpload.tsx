@@ -1,4 +1,4 @@
-// src/components/ImageUpload.tsx
+// src/components/ImageUpload.tsx - PRODUCTION READY
 import React, { useState, useRef } from 'react';
 import { FaImage, FaVideo, FaTimes, FaSpinner } from 'react-icons/fa';
 import { uploadMedia, compressImage } from '../services/uploadService';
@@ -82,11 +82,15 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       {preview ? (
         <div className="relative rounded-xl overflow-hidden group">
           {mediaType === 'video' ? (
+            // ✅ FIXED: Video with controls, preload, and object-contain
             <video 
               src={preview} 
               controls 
-              className="w-full max-h-96 object-cover"
-            />
+              preload="metadata"
+              className="w-full max-h-96 object-contain bg-black"
+            >
+              Your browser does not support video playback.
+            </video>
           ) : (
             <img 
               src={preview} 
@@ -95,7 +99,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             />
           )}
           
-          {/* Remove button */}
+          {/* ✅ FIXED: Remove button - proper JSX syntax */}
           <button
             onClick={handleRemove}
             disabled={uploading}
