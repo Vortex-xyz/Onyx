@@ -274,7 +274,7 @@ export default function GalleryPage({ darkMode, userId }: GalleryPageProps) {
     if (newIndex >= posts.length) newIndex = 0;
     setSelectedPost(posts[newIndex]);
   };
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedPost) return;
