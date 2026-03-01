@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaRocket, FaHeart, FaUsers, FaComments, FaPlay, FaStar, FaArrowRight } from 'react-icons/fa';
+import { FaRocket, FaHeart, FaUsers, FaComments, FaPlay, FaStar, FaArrowRight, FaImages, FaVideo } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LandingPage() {
@@ -19,76 +19,66 @@ export default function LandingPage() {
   useEffect(() => {
     setAnimateHero(true);
     const interval = setInterval(() => {
-      setCurrentFeature((prev) => (prev + 1) % 3);
-    }, 3000);
+      setCurrentFeature((prev) => (prev + 1) % 4);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
   const features = [
     {
-      icon: FaComments,
-      title: "Connect & Chat",
-      description: "Join real-time discussions about your favorite anime series with fans worldwide"
+      icon: FaUsers,
+      title: "Connect with Otaku",
+      description: "Follow fellow anime fans, discover their watchlists, and build your anime network"
     },
     {
-      icon: FaUsers,
-      title: "Build Community",
-      description: "Create groups, share recommendations, and make lasting friendships in the anime world"
+      icon: FaImages,
+      title: "Share Your Collection",
+      description: "Upload screenshots, fan art, and your favorite anime moments with the community"
+    },
+    {
+      icon: FaVideo,
+      title: "Video Posts",
+      description: "Share AMVs, anime clips, and reactions with full video support"
     },
     {
       icon: FaHeart,
-      title: "Share & Discover",
-      description: "Share your anime artwork, reviews, and discover hidden gems from fellow otakus"
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: "SakuraFan69_2067",
-      content: "Finally found my anime family! The discussions here are amazing.",
-      rating: 5
-    },
-    {
-      name: "NarutoLover_91I",
-      content: "Best place to get anime recommendations. Discovered so many great series!",
-      rating: 5
-    },
-    {
-      name: "OtakuArtist_2016",
-      content: "Love sharing my fanart here. The community is so supportive!",
-      rating: 5
+      title: "Engage & Interact",
+      description: "Like, comment, and discuss your favorite series with passionate fans"
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-400 overflow-hidden">
-      {/* Background Animation */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="animate-pulse absolute top-10 left-10 w-20 h-20 bg-white rounded-full"></div>
-        <div className="animate-pulse absolute top-32 right-20 w-16 h-16 bg-white rounded-full delay-300"></div>
-        <div className="animate-pulse absolute bottom-20 left-32 w-12 h-12 bg-white rounded-full delay-700"></div>
-        <div className="animate-pulse absolute bottom-32 right-16 w-24 h-24 bg-white rounded-full delay-500"></div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 overflow-hidden relative">
+      {/* Animated Background */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="animate-float absolute top-20 left-10 w-32 h-32 bg-purple-500 rounded-full blur-3xl"></div>
+        <div className="animate-float-delayed absolute top-40 right-20 w-40 h-40 bg-indigo-500 rounded-full blur-3xl"></div>
+        <div className="animate-float absolute bottom-32 left-32 w-36 h-36 bg-violet-500 rounded-full blur-3xl"></div>
+        <div className="animate-float-delayed absolute bottom-20 right-16 w-48 h-48 bg-purple-600 rounded-full blur-3xl"></div>
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-10 flex justify-between items-center p-6">
-        <div className="flex items-center space-x-2">
-          <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">O</span>
+      <nav className="relative z-10 flex justify-between items-center p-6 backdrop-blur-sm bg-black/10">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-2xl">O</span>
           </div>
-          <h1 className="text-2xl font-bold text-white stroke-black">Onyx</h1>
+          <div>
+            <h1 className="text-2xl font-black text-white tracking-tight">ONYX</h1>
+            <p className="text-[8px] text-purple-200 tracking-widest uppercase -mt-1">Anime Network</p>
+          </div>
         </div>
         
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate('/login')}
-            className="text-white/90 hover:text-white transition-colors"
+            className="text-white/90 hover:text-white font-medium transition-colors"
           >
             Sign In
           </button>
           <button
             onClick={() => navigate('/login')}
-            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-all duration-300 font-medium"
+            className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-6 py-2.5 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-purple-500/50"
           >
             Get Started
           </button>
@@ -96,64 +86,78 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] text-center px-6">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[85vh] text-center px-6">
         <div className={`transition-all duration-1000 ${animateHero ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           <div className="flex items-center justify-center mb-8">
             <div className="relative">
-              <FaRocket className="text-8xl text-white animate-bounce" />
-              <div className="absolute -top-4 -right-4 w-8 h-8 bg-pink-400 rounded-full animate-ping"></div>
+              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center shadow-2xl animate-float">
+                <FaRocket className="text-5xl text-white" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-pink-400 rounded-full animate-ping"></div>
             </div>
           </div>
           
-          <h1 className="text-6xl md:text-7xl font-extrabold text-white drop-shadow-lg mb-6">
-            Welcome to Onyx
+          <h1 className="text-6xl md:text-7xl font-black text-white mb-4 tracking-tight">
+            Welcome to <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Onyx</span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl leading-relaxed">
-            The ultimate destination for anime fans to connect, share, and discover amazing content together
+          <p className="text-xl md:text-2xl text-purple-100 mb-12 max-w-3xl leading-relaxed font-light">
+            Your anime social network. Share moments, connect with fans, and discover new series.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <button
               onClick={() => navigate('/login')}
-              className="bg-white text-purple-600 hover:bg-gray-100 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center space-x-2 min-w-[200px]"
+              className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-bold py-4 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-purple-500/30 flex items-center space-x-3 min-w-[220px]"
             >
-              <FaRocket />
-              <span>Start Your Journey</span>
+              <FaRocket className="text-xl" />
+              <span>Join the Community</span>
             </button>
             
-            <button className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors">
-              <FaPlay className="text-lg" />
-              <span>Watch Demo</span>
+            <button 
+              onClick={() => navigate('/login')}
+              className="flex items-center space-x-2 text-purple-200 hover:text-white transition-colors font-medium"
+            >
+              <FaPlay className="text-sm" />
+              <span>Explore Features</span>
             </button>
           </div>
 
-          {/* Quick Stats */}
-          <div className="flex justify-center space-x-8 text-white/80">
-            <div className="text-center">
-              <div className="text-2xl font-bold">10K+</div>
-              <div className="text-sm">Anime Fans</div>
+          {/* Feature Highlights */}
+          <div className="flex flex-wrap justify-center gap-6 text-purple-200 max-w-2xl mx-auto">
+            <div className="flex items-center space-x-2">
+              <FaImages className="text-purple-400" />
+              <span className="text-sm">Image Sharing</span>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">50K+</div>
-              <div className="text-sm">Discussions</div>
+            <div className="flex items-center space-x-2">
+              <FaVideo className="text-purple-400" />
+              <span className="text-sm">Video Posts</span>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">1K+</div>
-              <div className="text-sm">Series Covered</div>
+            <div className="flex items-center space-x-2">
+              <FaUsers className="text-purple-400" />
+              <span className="text-sm">Follow System</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <FaHeart className="text-purple-400" />
+              <span className="text-sm">Likes & Comments</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Features Section */}
-      <div className="relative z-10 py-20 px-6">
+      <div className="relative z-10 py-24 px-6 bg-black/20 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-white text-center mb-16">
-            Why Anime Fans Love Onyx
-          </h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+              Everything You Need
+            </h2>
+            <p className="text-purple-200 text-lg">
+              Built for anime fans, by anime fans
+            </p>
+          </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => {
               const FeatureIcon = feature.icon;
               const isActive = index === currentFeature;
@@ -161,15 +165,17 @@ export default function LandingPage() {
               return (
                 <div
                   key={index}
-                  className={`bg-white/10 backdrop-blur-sm rounded-xl p-8 text-center transition-all duration-500 hover:bg-white/20 ${
-                    isActive ? 'scale-105 bg-white/20' : ''
+                  className={`bg-white/5 backdrop-blur-md rounded-2xl p-6 transition-all duration-500 border border-white/10 hover:border-purple-500/50 hover:bg-white/10 ${
+                    isActive ? 'scale-105 bg-white/10 border-purple-500/50 shadow-2xl shadow-purple-500/20' : ''
                   }`}
                 >
                   <div className="flex justify-center mb-6">
-                    <FeatureIcon className={`text-5xl text-white transition-all duration-500 ${isActive ? 'animate-bounce' : ''}`} />
+                    <div className={`w-16 h-16 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg ${isActive ? 'animate-bounce' : ''}`}>
+                      <FeatureIcon className="text-2xl text-white" />
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
-                  <p className="text-white/80 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-xl font-bold text-white mb-3 text-center">{feature.title}</h3>
+                  <p className="text-purple-200 text-sm text-center leading-relaxed">{feature.description}</p>
                 </div>
               );
             })}
@@ -177,66 +183,65 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Testimonials Section */}
-      <div className="relative z-10 py-20 px-6 bg-white/5 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-bold text-white text-center mb-16">
-            What Our Community Says
-          </h2>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <FaStar key={i} className="text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-white/90 mb-4 italic">"{testimonial.content}"</p>
-                <p className="text-white/70 font-medium">- {testimonial.name}</p>
-              </div>
-            ))}
+      {/* CTA Section */}
+      <div className="relative z-10 py-24 px-6 text-center">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-gradient-to-br from-purple-900/50 to-violet-900/50 backdrop-blur-xl rounded-3xl p-12 border border-purple-500/20 shadow-2xl">
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+              Ready to Join?
+            </h2>
+            <p className="text-xl text-purple-100 mb-10">
+              Start sharing your anime journey today. Completely free.
+            </p>
+            
+            <button
+              onClick={() => navigate('/login')}
+              className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-bold py-5 px-12 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-purple-500/30 flex items-center space-x-3 mx-auto text-lg"
+            >
+              <span>Create Your Account</span>
+              <FaArrowRight className="text-xl" />
+            </button>
+            
+            <p className="text-purple-300 text-sm mt-6">
+              No credit card required • Join in 30 seconds
+            </p>
           </div>
-        </div>
-      </div>
-
-      {/* Final CTA Section */}
-      <div className="relative z-10 py-20 px-6 text-center">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to Join the Community?
-          </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Connect with thousands of anime fans and start your journey today
-          </p>
-          
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center space-x-2 mx-auto"
-          >
-            <span>Join Onyx Now</span>
-            <FaArrowRight />
-          </button>
-          
-          <p className="text-white/60 text-sm mt-4">
-            Free to join • No credit card required
-          </p>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 py-8 px-6 border-t border-white/20">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center text-white/70 text-sm">
-          <div className="mb-4 md:mb-0">
-            © 2025 Onyx. All rights reserved.
+      <div className="relative z-10 py-8 px-6 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center text-purple-300 text-sm">
+          <div className="mb-4 md:mb-0 flex items-center space-x-2">
+            <span className="font-bold text-white">ONYX</span>
+            <span>•</span>
+            <span>Anime Social Network</span>
+            <span>•</span>
+            <span>© 2026</span>
           </div>
           <div className="flex space-x-6">
-            <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
-            <a href="/terms" className="hover:text-white transition-colors">Terms</a>
-            <a href="/contact" className="hover:text-white transition-colors">Contact</a>
+            <button className="hover:text-white transition-colors">About</button>
+            <button className="hover:text-white transition-colors">Privacy</button>
+            <button className="hover:text-white transition-colors">Terms</button>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        
+        .animate-float-delayed {
+          animation: float 6s ease-in-out infinite;
+          animation-delay: 3s;
+        }
+      `}</style>
     </div>
   );
 }

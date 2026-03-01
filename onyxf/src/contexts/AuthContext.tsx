@@ -1,11 +1,10 @@
-// src/contexts/AuthContext.tsx - FIXED: TS2430 AuthUser extends User conflict
+// src/contexts/AuthContext.tsx - FINAL: Profile Caching + All Fixes
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../config/supabaseClient';
 import toast from 'react-hot-toast';
 
-// ✅ FIX TS2430: Don't extend User directly — Supabase's User has created_at as required,
-// but we need it optional. Use Omit to remove the conflicting fields then re-declare them.
+// ✅ FIX TS2430: Don't extend User directly
 export interface AuthUser extends Omit<User, 'created_at'> {
   created_at?: string;
   username?: string;
@@ -46,6 +45,10 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// ✅✅✅ CRITICAL FIX: Profile cache to prevent tab switch redirects
+let cachedProfile: { userId: string; profile: any; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -56,8 +59,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔍 Fetching user profile for:', userId);
 
+      // ✅ Check cache first
+      if (cachedProfile && cachedProfile.userId === userId) {
+        const age = Date.now() - cachedProfile.timestamp;
+        if (age < CACHE_DURATION) {
+          console.log('✅ Using cached profile (age:', Math.round(age / 1000), 'seconds)');
+          return cachedProfile.profile;
+        } else {
+          console.log('⏰ Cache expired, fetching fresh profile');
+        }
+      }
+
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000);
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
       });
 
       const profile = await Promise.race([
@@ -81,6 +95,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (profile) {
         console.log('✅ User profile loaded:', profile.username);
+        
+        // ✅ Cache the profile
+        cachedProfile = {
+          userId,
+          profile,
+          timestamp: Date.now()
+        };
       }
 
       return profile;
@@ -153,9 +174,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
+      console.log('🔄 Refreshing user data...');
+      
+      // ✅ Clear cache to force fresh fetch
+      cachedProfile = null;
+      
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser) {
-        console.log('🔄 Refreshing user data...');
         const enrichedUser = await enrichUser(currentUser);
         setUser(enrichedUser);
       }
@@ -167,9 +192,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const completeProfileSetup = async () => {
     console.log('✅ Profile setup complete');
     setNeedsProfileSetup(false);
+    
+    // ✅ Clear cache and refresh
+    cachedProfile = null;
     await refreshUser();
   };
-// eslint-disable-next-line react-hooks/exhaustive-deps
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -205,10 +234,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         try {
           if (currentSession?.user) {
+            // ✅✅✅ CRITICAL FIX: Skip re-fetch if we already have valid cached profile
+            if (user && user.id === currentSession.user.id && user.profile_completed === true && cachedProfile) {
+              console.log('✅ Profile already loaded and valid, skipping re-fetch');
+              setSession(currentSession);
+              return;
+            }
+            
             const enrichedUser = await enrichUser(currentSession.user);
             setUser(enrichedUser);
             setSession(currentSession);
           } else {
+            // ✅ Clear cache on sign out
+            cachedProfile = null;
             setUser(null);
             setSession(null);
             setNeedsProfileSetup(false);
@@ -330,6 +368,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     setLoading(true);
     try {
+      // ✅ Clear cache on logout
+      cachedProfile = null;
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setSession(null);

@@ -123,7 +123,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-600 to-pink-500 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">🎌 Onyx</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">Onyx</h1>
           <h2 className="text-2xl font-extrabold text-white">
             {isLogin ? 'Welcome Back!' : 'Join the Community'}
           </h2>
