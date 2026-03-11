@@ -47,7 +47,7 @@ interface AuthProviderProps {
 
 // ✅✅✅ CRITICAL FIX: Profile cache to prevent tab switch redirects
 let cachedProfile: { userId: string; profile: any; timestamp: number } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 59 * 60 * 1000; // 59 minutes
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -240,6 +240,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setSession(currentSession);
               return;
             }
+            
             
             const enrichedUser = await enrichUser(currentSession.user);
             setUser(enrichedUser);
