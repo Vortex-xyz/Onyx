@@ -167,7 +167,7 @@ export default function LandingPage() {
 
             <p className="text-gray-400 text-lg max-w-2xl mx-auto font-light leading-relaxed">
               If you know, you know. If you don't, you'll never reach the{' '}
-              <span className="text-purple-400">domain expansion</span>.
+              <span className="text-purple-400">Cult</span>.
             </p>
           </div>
 
