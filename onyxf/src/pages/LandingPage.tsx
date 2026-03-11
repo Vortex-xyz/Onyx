@@ -155,9 +155,9 @@ export default function LandingPage() {
                 transform: `perspective(1000px) rotateX(${mousePos.y * -2}deg) rotateY(${mousePos.x * 2}deg)`
               }}
             >
-              You found{' '}
+              Onyx{' '}
               <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-                it
+                Network
               </span>
             </h1>
 
