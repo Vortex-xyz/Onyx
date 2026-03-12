@@ -1,4 +1,4 @@
-// src/pages/HomePage.tsx - COMPLETE COMPONENTIZED VERSION
+// src/pages/HomePage.tsx - COMPLETE WITH SECURITY FEATURES
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +15,8 @@ import {
 } from '../services/postService';
 import { followUser, isFollowing as checkIsFollowing } from '../services/followService';
 import { postQueue } from '../services/postQueue';
+import { reportPost, ReportReason } from '../services/reportService';
+import { moderateContent } from '../services/contentFilter';
 import { ExplorePage } from './ExplorePage';
 import GalleryPage from './GalleryPage';
 import { ProfilePage } from './ProfilePage';
@@ -30,6 +32,7 @@ import { FilterChips } from '../components/home/FilterChips';
 import { PostCard } from '../components/home/PostCard';
 import { CreatePostModal } from '../components/home/CreatePostModal';
 import { MobileBottomNav } from '../components/home/MobileBottomNav';
+import { ReportModal } from '../components/home/ReportModal';
 
 // Import types from components
 import { 
@@ -112,6 +115,7 @@ export default function HomePage() {
   
   // UI state
   const [showPostMenu, setShowPostMenu] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState<string | null>(null);
   
   // Refs
   const observerTarget = useRef(null);
@@ -295,6 +299,14 @@ export default function HomePage() {
       toast.error('Post content is required');
       return;
     }
+
+    // ✅ CONTENT MODERATION
+    const moderation = moderateContent(postContent);
+    if (!moderation.clean) {
+      toast.error(`Post blocked: ${moderation.reason}`);
+      return;
+    }
+
     try {
       setIsSubmittingPost(true);
       const optimisticPost = await createPost({
@@ -309,9 +321,14 @@ export default function HomePage() {
       setShowCreateModal(false);
       toast.success('Post created! 🎉');
       postQueue.processQueue();
-    } catch (error) {
-      console.error('Failed to create post:', error);
-      toast.error('Failed to create post');
+    } catch (error: any) {
+      // Handle rate limit error
+      if (error.message?.includes('Rate limit') || error.message?.includes('rate limit')) {
+        toast.error('Slow down! You can only create 10 posts per hour. ⏰');
+      } else {
+        console.error('Failed to create post:', error);
+        toast.error('Failed to create post');
+      }
     } finally {
       setIsSubmittingPost(false);
     }
@@ -390,6 +407,22 @@ export default function HomePage() {
     navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
     toast.success('Link copied! 🔗');
     setShowPostMenu(null);
+  };
+
+  const handleReportPost = async (postId: string, reason: ReportReason, description: string) => {
+    try {
+      await reportPost(postId, reason, description);
+      toast.success('Report submitted. Thank you for keeping Onyx safe! 🛡️');
+      setShowReportModal(null);
+      setShowPostMenu(null);
+    } catch (error: any) {
+      if (error.message.includes('already reported')) {
+        toast.error('You have already reported this post');
+      } else {
+        toast.error('Failed to submit report');
+      }
+      console.error('Report error:', error);
+    }
   };
 
   const handleToggleComments = async (postId: string) => {
@@ -556,6 +589,7 @@ export default function HomePage() {
                     onFollow={() => handleFollow(post.user_id)}
                     onDelete={() => handleDeletePost(post.id)}
                     onToggleMenu={() => setShowPostMenu(prev => prev === post.id ? null : post.id)}
+                    onReport={() => setShowReportModal(post.id)}
                     onCommentChange={setCommentText}
                     onSubmitComment={() => handleAddComment(post.id)}
                     formatTime={formatTime}
@@ -599,6 +633,17 @@ export default function HomePage() {
         onSubmit={handleCreatePost}
         onClose={() => setShowCreateModal(false)}
       />
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <ReportModal
+          darkMode={darkMode}
+          isOpen={!!showReportModal}
+          postId={showReportModal}
+          onClose={() => setShowReportModal(null)}
+          onSubmit={(reason, description) => handleReportPost(showReportModal, reason, description)}
+        />
+      )}
 
       {/* Mobile Bottom Nav */}
       <MobileBottomNav

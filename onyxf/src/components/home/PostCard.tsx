@@ -30,6 +30,7 @@ interface PostCardProps {
   onFollow: () => void;
   onDelete: () => void;
   onToggleMenu: () => void;
+  onReport: () => void;
   onCommentChange: (text: string) => void;
   onSubmitComment: () => void;
   formatTime: (isoString: string) => string;
@@ -57,6 +58,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onFollow,
   onDelete,
   onToggleMenu,
+  onReport,
   onCommentChange,
   onSubmitComment,
   formatTime,
@@ -82,7 +84,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
       )}
 
-      {/* POST HEADER */}
       <div className="p-5 flex items-center justify-between">
         <PostHeader
           darkMode={darkMode}
@@ -104,16 +105,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           onToggle={onToggleMenu}
           onShare={onShare}
           onDelete={onDelete}
+          onReport={onReport}
         />
       </div>
 
-      {/* POST CONTENT */}
       <PostContent darkMode={darkMode} content={post.content} />
 
-      {/* POST MEDIA */}
       <PostMedia darkMode={darkMode} mediaUrl={post.media_url} mediaType={post.media_type} />
 
-      {/* POST ACTIONS */}
       <PostActions
         darkMode={darkMode}
         postId={post.id}
@@ -131,7 +130,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         formatCount={formatCount}
       />
 
-      {/* COMMENTS SECTION */}
       {showComments && (
         <PostComments
           darkMode={darkMode}

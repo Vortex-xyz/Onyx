@@ -133,13 +133,13 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-gray-200">
-          {isLogin ? "Don't have an account? " : 'Already have an account? '}
+          {isLogin ? "  " : 'Already have an account? '}
           <button
             onClick={() => setIsLogin(!isLogin)}
             type="button"
             className="font-medium text-white hover:text-gray-100 focus:outline-none focus:underline transition ease-in-out duration-150"
           >
-            {isLogin ? 'Sign up' : 'Sign in'}
+            {isLogin ? '  ' : 'Sign in'}
           </button>
         </p>
       </div>

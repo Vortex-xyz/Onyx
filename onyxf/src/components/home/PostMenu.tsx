@@ -1,6 +1,6 @@
 // src/components/home/PostMenu.tsx
 import React from 'react';
-import { FaEllipsisH, FaLink, FaTrash } from 'react-icons/fa';
+import { FaEllipsisH, FaLink, FaTrash, FaFlag } from 'react-icons/fa';
 
 interface PostMenuProps {
   darkMode: boolean;
@@ -11,6 +11,7 @@ interface PostMenuProps {
   onToggle: () => void;
   onShare: () => void;
   onDelete: () => void;
+  onReport: () => void;
 }
 
 export const PostMenu: React.FC<PostMenuProps> = ({
@@ -20,7 +21,8 @@ export const PostMenu: React.FC<PostMenuProps> = ({
   isOpen,
   onToggle,
   onShare,
-  onDelete
+  onDelete,
+  onReport
 }) => {
   return (
     <div className="relative ml-2" data-post-menu>
@@ -48,6 +50,18 @@ export const PostMenu: React.FC<PostMenuProps> = ({
             <FaLink className="text-sm" />
             <span className="font-medium text-sm">Copy Link</span>
           </button>
+
+          {!isOwnPost && (
+            <button
+              onClick={onReport}
+              className={`w-full flex items-center space-x-3 px-4 py-3 transition-all ${
+                darkMode ? 'hover:bg-gray-800 text-yellow-500' : 'hover:bg-gray-100 text-yellow-600'
+              }`}
+            >
+              <FaFlag className="text-sm" />
+              <span className="font-medium text-sm">Report Post</span>
+            </button>
+          )}
 
           {isOwnPost && !isOptimistic && (
             <button
