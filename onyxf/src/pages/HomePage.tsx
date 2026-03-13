@@ -411,7 +411,7 @@ export default function HomePage() {
 
   const handleReportPost = async (postId: string, reason: ReportReason, description: string) => {
     try {
-      await reportPost(postId, reason, description);
+      await reportPost(postId, user!.id, reason, description);
       toast.success('Report submitted. Thank you for keeping Onyx safe! 🛡️');
       setShowReportModal(null);
       setShowPostMenu(null);
