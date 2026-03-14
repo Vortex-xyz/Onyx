@@ -1,5 +1,6 @@
-// src/components/home/PostComments.tsx
+// src/components/home/PostComments.tsx - WITH CLICKABLE USERNAMES
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Comment, UserData } from './types';
 
 interface PostCommentsProps {
@@ -60,17 +61,22 @@ export const PostComments: React.FC<PostCommentsProps> = ({
         <div className="space-y-4">
           {comments.map((comment) => (
             <div key={comment.id} className="flex items-start space-x-3">
-              <img
-                src={comment.author?.avatar_url || 'https://i.pravatar.cc/150'}
-                alt={comment.author?.username || 'User'}
-                className="w-8 h-8 rounded-full"
-              />
+              <Link to={comment.author?.username ? `/profile/${comment.author.username}` : '#'}>
+                <img
+                  src={comment.author?.avatar_url || 'https://i.pravatar.cc/150'}
+                  alt={comment.author?.username || 'User'}
+                  className="w-8 h-8 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </Link>
               <div className="flex-1">
                 <div className={`rounded-lg p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <Link 
+                      to={comment.author?.username ? `/profile/${comment.author.username}` : '#'}
+                      className={`text-sm font-semibold hover:underline transition-all ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                    >
                       {comment.author?.username || 'Anonymous'}
-                    </span>
+                    </Link>
                     <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
                       {formatTime(comment.created_at)}
                     </span>

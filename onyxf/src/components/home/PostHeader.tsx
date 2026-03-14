@@ -1,5 +1,6 @@
-// src/components/home/PostHeader.tsx
+// src/components/home/PostHeader.tsx - WITH CLICKABLE USERNAME
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { FaStar, FaUserPlus, FaUserCheck } from 'react-icons/fa';
 import { Author } from './types';
 
@@ -27,11 +28,13 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   return (
     <div className="flex items-center space-x-3 flex-1 min-w-0">
       <div className="relative">
-        <img
-          src={author?.avatar_url || 'https://i.pravatar.cc/150'}
-          alt={author?.username || 'User'}
-          className={`w-11 h-11 rounded-full border ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}
-        />
+        <Link to={author?.username ? `/profile/${author.username}` : '#'}>
+          <img
+            src={author?.avatar_url || 'https://i.pravatar.cc/150'}
+            alt={author?.username || 'User'}
+            className={`w-11 h-11 rounded-full border cursor-pointer hover:opacity-80 transition-opacity ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}
+          />
+        </Link>
         {author?.isPremium && (
           <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center border-2 ${darkMode ? 'border-gray-900' : 'border-white'}`}>
             <FaStar className="text-white text-[7px]" />
@@ -40,9 +43,12 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">
-          <h3 className={`font-semibold text-sm truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <Link 
+            to={author?.username ? `/profile/${author.username}` : '#'}
+            className={`font-semibold text-sm truncate hover:underline transition-all ${darkMode ? 'text-white' : 'text-gray-900'}`}
+          >
             {author?.username || 'Anonymous'}
-          </h3>
+          </Link>
           <span className={darkMode ? 'text-gray-700' : 'text-gray-400'}>•</span>
           <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>
             {formatTime(createdAt)}

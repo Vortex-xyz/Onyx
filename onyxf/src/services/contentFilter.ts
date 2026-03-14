@@ -3,11 +3,11 @@
 // Basic profanity and spam detection
 const BLOCKED_WORDS = [
   // Add your blocked words here
-  'viagra', 'cialis', 'casino', 'porn', 'xxx',
+  'viagra', 'cialis', 'casino', 'porn', 'xxx', 'free money', 'work from home', 'get rich quick',
   // Spam indicators
-  'click here', 'buy now', 'limited time', 'act now',
+  'click here', 'buy now', 'limited time', 'act now', 'skibidi'
   // Common spam domains
-  'bit.ly', 't.co', 'tinyurl'
+  ,'bit.ly', 't.co', 'tinyurl'
 ];
 
 const SPAM_PATTERNS = [

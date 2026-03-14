@@ -1,4 +1,4 @@
-// onyxf/src/routes/index.tsx - FIXED WITH AUTH CALLBACK
+// onyxf/src/routes/index.tsx - CORRECT VERSION
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,9 +7,10 @@ import LoginPage from '../pages/LoginPage';
 import HomePage from '../pages/HomePage';
 import CreatePostPage from '../pages/CreatePostPage';
 import ProfileSetup from '../pages/ProfileSetup';
-import UserProfilePage from '../pages/ProfilePage';
+import ProfilePage from '../pages/ProfilePage'; // YOUR edit profile page
+import PublicUserProfilePage from '../pages/UserProfilePage'; // VIEW OTHER users
 import SettingsPage from '../pages/SettingsPage';
-import AuthCallback from '../pages/AuthCallback'; // ✅ ADD THIS
+import AuthCallback from '../pages/AuthCallback';
 
 console.log('🚀 Routes loaded - OAuth version');
 console.log('✅ AuthCallback imported:', typeof AuthCallback);
@@ -133,14 +134,28 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* 👤 PROFILE ROUTES - ORDER MATTERS! */}
+        {/* Edit YOUR OWN profile - must be BEFORE /:username */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* View OTHER users' profiles */}
         <Route
           path="/profile/:username"
           element={
             <ProtectedRoute>
-              <UserProfilePage />
+              <PublicUserProfilePage />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/settings"
           element={
