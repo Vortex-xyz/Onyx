@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.tsx - WITH FOLLOW SYSTEM 🚀
+// src/pages/ProfilePage.tsx - WITH SAVED POSTS TAB 🚀
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../config/supabaseClient';
@@ -10,6 +10,7 @@ import {
   getFollowing, 
   FollowUser 
 } from '../services/followService';
+import { getSavedPosts, unsavePost, SavedPost } from '../services/savedPostsService';
 import toast from 'react-hot-toast';
 import {
   FaUserCircle,
@@ -39,7 +40,9 @@ import {
   FaCheck,
   FaUserPlus,
   FaUserCheck,
-  FaUsers
+  FaUsers,
+  FaBookmark,
+  FaTrash
 } from 'react-icons/fa';
 
 interface UserProfile {
@@ -91,8 +94,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'posts' | 'media'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'saved'>('posts');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Saved posts state
+  const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
+  const [loadingSavedPosts, setLoadingSavedPosts] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   
   // Follow system
   const [isFollowingUser, setIsFollowingUser] = useState(false);
@@ -118,7 +126,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
 
   const profileUserId = userId || currentUser?.id;
   const isOwnProfile = currentUser?.id === profileUserId;
-// eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (profileUserId) {
       loadProfile();
@@ -127,6 +135,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
         checkFollowStatus();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileUserId]);
 
   const loadProfile = async () => {
@@ -175,6 +184,41 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
     }
   };
 
+  const loadSavedPosts = async () => {
+    if (!profileUserId || !isOwnProfile) return;
+    
+    try {
+      setLoadingSavedPosts(true);
+      const posts = await getSavedPosts(profileUserId);
+      setSavedPosts(posts);
+    } catch (error) {
+      console.error('Error loading saved posts:', error);
+      toast.error('Failed to load saved posts');
+    } finally {
+      setLoadingSavedPosts(false);
+    }
+  };
+
+  const handleUnsave = async (postId: string) => {
+    if (!profileUserId) return;
+
+    setRemovingId(postId);
+    try {
+      const success = await unsavePost(profileUserId, postId);
+      if (success) {
+        setSavedPosts(prev => prev.filter(sp => sp.post_id !== postId));
+        toast.success('Removed from saved posts');
+      } else {
+        toast.error('Failed to remove post');
+      }
+    } catch (error) {
+      console.error('Error unsaving post:', error);
+      toast.error('Failed to remove post');
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
   const checkFollowStatus = async () => {
     if (!profileUserId) return;
     const following = await isFollowing(profileUserId);
@@ -189,7 +233,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
       const nowFollowing = await followUser(profileUserId);
       setIsFollowingUser(nowFollowing);
       
-      // Update follower count optimistically
       setProfile(prev => prev ? {
         ...prev,
         followers_count: prev.followers_count + (nowFollowing ? 1 : -1)
@@ -617,7 +660,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
                 </p>
               </div>
 
-              {/* Stats Grid - WITH FOLLOW COUNTS */}
+              {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className={`p-3 rounded-xl border ${darkMode ? 'bg-black/50 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
                   <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -633,7 +676,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
                 </div>
               </div>
 
-              {/* FOLLOW STATS - CLICKABLE */}
+              {/* FOLLOW STATS */}
               <div className={`grid grid-cols-2 gap-3 mb-6 p-4 rounded-xl border ${
                 darkMode ? 'bg-black/50 border-gray-800' : 'bg-gray-50 border-gray-200'
               }`}>
@@ -949,6 +992,25 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
                   >
                     Media
                   </button>
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('saved');
+                        if (savedPosts.length === 0 && !loadingSavedPosts) {
+                          loadSavedPosts();
+                        }
+                      }}
+                      className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+                        activeTab === 'saved'
+                          ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/30'
+                          : darkMode
+                            ? 'text-gray-500 hover:text-white hover:bg-gray-800'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      Saved
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -1096,6 +1158,99 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
               </div>
             )}
 
+            {activeTab === 'saved' && (
+              loadingSavedPosts ? (
+                <div className="text-center py-16">
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="absolute inset-0 rounded-full border-4 border-purple-600/20"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-purple-600 border-t-transparent animate-spin"></div>
+                  </div>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Loading saved posts...
+                  </p>
+                </div>
+              ) : savedPosts.length === 0 ? (
+                <div className={`rounded-2xl border p-16 text-center ${
+                  darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white/50 border-gray-200'
+                }`}>
+                  <FaBookmark className={`text-6xl mx-auto mb-4 ${darkMode ? 'text-gray-800' : 'text-gray-300'}`} />
+                  <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    No saved posts yet
+                  </h3>
+                  <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                    Posts you save will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {savedPosts.map((savedPost) => (
+                    <div
+                      key={savedPost.id}
+                      className={`aspect-square rounded-xl overflow-hidden cursor-pointer group relative border ${
+                        darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      {savedPost.post.media_url ? (
+                        <>
+                          <img 
+                            src={savedPost.post.media_url} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnsave(savedPost.post_id);
+                              }}
+                              disabled={removingId === savedPost.post_id}
+                              className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition-all"
+                            >
+                              {removingId === savedPost.post_id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              ) : (
+                                <FaTrash className="text-sm" />
+                              )}
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-center space-x-6 text-white">
+                              <div className="flex items-center space-x-2">
+                                <FaHeart className="text-red-500" />
+                                <span className="font-bold">{formatCount(savedPost.post.likes)}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <FaComment className="text-blue-500" />
+                                <span className="font-bold">{formatCount(savedPost.post.comments_count)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className={`w-full h-full flex flex-col items-center justify-center p-5 ${
+                          darkMode ? 'bg-gray-800' : 'bg-gray-100'
+                        }`}>
+                          <p className={`text-sm line-clamp-6 text-center mb-3 ${
+                            darkMode ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            {savedPost.post.content}
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnsave(savedPost.post_id);
+                            }}
+                            disabled={removingId === savedPost.post_id}
+                            className="text-red-500 hover:text-red-600 text-xs"
+                          >
+                            {removingId === savedPost.post_id ? 'Removing...' : 'Remove'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
             {/* Empty State */}
             {((activeTab === 'posts' && userPosts.length === 0) || 
               (activeTab === 'media' && mediaPosts.length === 0)) && (
@@ -1239,5 +1394,4 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ darkMode = true, userI
   );
 };
 
-// Default export for routes
 export default ProfilePage;

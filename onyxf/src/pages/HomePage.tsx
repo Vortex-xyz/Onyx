@@ -1,4 +1,4 @@
-// src/pages/HomePage.tsx - COMPLETE WITH SECURITY FEATURES
+// src/pages/HomePage.tsx - WITH SAVED POSTS INTEGRATION
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,7 @@ import { followUser, isFollowing as checkIsFollowing } from '../services/followS
 import { postQueue } from '../services/postQueue';
 import { reportPost, ReportReason } from '../services/reportService';
 import { moderateContent } from '../services/contentFilter';
+import { savePost, unsavePost, isPostSaved } from '../services/savedPostsService';
 import { ExplorePage } from './ExplorePage';
 import GalleryPage from './GalleryPage';
 import { ProfilePage } from './ProfilePage';
@@ -215,6 +216,24 @@ export default function HomePage() {
     loadInitialData();
   }, [navigate]);
 
+  // Load saved posts status
+  useEffect(() => {
+    const loadSavedStatus = async () => {
+      if (!user || posts.length === 0) return;
+      
+      const savedSet = new Set<string>();
+      for (const post of posts) {
+        const saved = await isPostSaved(user.id, post.id);
+        if (saved) {
+          savedSet.add(post.id);
+        }
+      }
+      setSavedPosts(savedSet);
+    };
+
+    loadSavedStatus();
+  }, [user, posts.length]);
+
   // Queue monitoring
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -300,7 +319,6 @@ export default function HomePage() {
       return;
     }
 
-    // ✅ CONTENT MODERATION
     const moderation = moderateContent(postContent);
     if (!moderation.clean) {
       toast.error(`Post blocked: ${moderation.reason}`);
@@ -322,7 +340,6 @@ export default function HomePage() {
       toast.success('Post created! 🎉');
       postQueue.processQueue();
     } catch (error: any) {
-      // Handle rate limit error
       if (error.message?.includes('Rate limit') || error.message?.includes('rate limit')) {
         toast.error('Slow down! You can only create 10 posts per hour. ⏰');
       } else {
@@ -459,18 +476,52 @@ export default function HomePage() {
     }
   };
 
-  const toggleSave = (postId: string) => {
+  const toggleSave = async (postId: string) => {
+    if (!user) {
+      toast.error('Please login to save posts');
+      return;
+    }
+
+    const isSaved = savedPosts.has(postId);
+
+    // Optimistic update
     setSavedPosts(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(postId)) {
-        newSet.delete(postId);
-        toast.success('Removed from saved');
-      } else {
-        newSet.add(postId);
-        toast.success('Saved!');
-      }
+      isSaved ? newSet.delete(postId) : newSet.add(postId);
       return newSet;
     });
+
+    try {
+      if (isSaved) {
+        const success = await unsavePost(user.id, postId);
+        if (success) {
+          toast.success('Removed from saved posts');
+        } else {
+          setSavedPosts(prev => new Set(prev).add(postId));
+          toast.error('Failed to remove from saved');
+        }
+      } else {
+        const success = await savePost(user.id, postId);
+        if (success) {
+          toast.success('Post saved! 📌');
+        } else {
+          setSavedPosts(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(postId);
+            return newSet;
+          });
+          toast.error('Failed to save post');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      setSavedPosts(prev => {
+        const newSet = new Set(prev);
+        isSaved ? newSet.add(postId) : newSet.delete(postId);
+        return newSet;
+      });
+      toast.error('Something went wrong');
+    }
   };
 
   // Loading screen
@@ -493,16 +544,13 @@ export default function HomePage() {
   // Main render
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-black' : 'bg-gray-50'}`}>
-      {/* Gradient Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className={`absolute top-0 right-1/4 w-[600px] h-[600px] bg-purple-600 rounded-full blur-[150px] ${darkMode ? 'opacity-10' : 'opacity-5'}`}></div>
         <div className={`absolute bottom-0 left-1/3 w-[600px] h-[600px] bg-violet-600 rounded-full blur-[150px] ${darkMode ? 'opacity-5' : 'opacity-3'}`}></div>
       </div>
 
-      {/* Queue Status */}
       <QueueStatus status={queueStatus} onRetryFailed={() => postQueue.retryFailed()} />
 
-      {/* Top Navigation */}
       <TopNav
         darkMode={darkMode}
         showExplore={showExplore}
@@ -512,7 +560,6 @@ export default function HomePage() {
         onProfileClick={() => setShowProfileMenu(!showProfileMenu)}
       />
 
-      {/* Profile Menu */}
       {showProfileMenu && (
         <div className="relative">
           <div className="fixed top-16 right-6 z-50">
@@ -530,7 +577,6 @@ export default function HomePage() {
       )}
 
       <div className="flex pt-16">
-        {/* Sidebar */}
         <Sidebar
           darkMode={darkMode}
           userData={userData}
@@ -542,7 +588,6 @@ export default function HomePage() {
           onLogout={async () => { await logout(); navigate('/login'); }}
         />
 
-        {/* Main Content */}
         <main className="flex-1 lg:ml-64 px-5 py-6 max-w-4xl mx-auto pb-20 lg:pb-6 relative z-10">
           {activeTab === 'gallery' ? (
             <GalleryPage darkMode={darkMode} />
@@ -612,7 +657,6 @@ export default function HomePage() {
         </main>
       </div>
 
-      {/* Create Post FAB */}
       <button
         onClick={() => setShowCreateModal(true)}
         className="fixed bottom-20 lg:bottom-8 right-8 bg-gradient-to-br from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white p-4 rounded-2xl shadow-2xl shadow-purple-500/40 transition-all hover:scale-105 z-40"
@@ -620,7 +664,6 @@ export default function HomePage() {
         <FaPlus className="text-xl" />
       </button>
 
-      {/* Create Post Modal */}
       <CreatePostModal
         darkMode={darkMode}
         isOpen={showCreateModal}
@@ -634,7 +677,6 @@ export default function HomePage() {
         onClose={() => setShowCreateModal(false)}
       />
 
-      {/* Report Modal */}
       {showReportModal && (
         <ReportModal
           darkMode={darkMode}
@@ -645,7 +687,6 @@ export default function HomePage() {
         />
       )}
 
-      {/* Mobile Bottom Nav */}
       <MobileBottomNav
         darkMode={darkMode}
         navItems={navItems}

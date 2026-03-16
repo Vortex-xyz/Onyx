@@ -1,4 +1,4 @@
-// onyxf/src/routes/index.tsx - CORRECT VERSION
+// onyxf/src/routes/index.tsx - WITH SAVED POSTS ROUTE
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,24 +7,16 @@ import LoginPage from '../pages/LoginPage';
 import HomePage from '../pages/HomePage';
 import CreatePostPage from '../pages/CreatePostPage';
 import ProfileSetup from '../pages/ProfileSetup';
-import ProfilePage from '../pages/ProfilePage'; // YOUR edit profile page
-import PublicUserProfilePage from '../pages/UserProfilePage'; // VIEW OTHER users
+import ProfilePage from '../pages/ProfilePage';
+import PublicUserProfilePage from '../pages/UserProfilePage';
+import SavedPostsPage from '../pages/SavedPostsPage';
 import SettingsPage from '../pages/SettingsPage';
 import AuthCallback from '../pages/AuthCallback';
 
 console.log('🚀 Routes loaded - OAuth version');
-console.log('✅ AuthCallback imported:', typeof AuthCallback);
 
-// ✅ Profile Setup Route Guard
 const ProfileSetupRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const { user, isLoading, needsProfileSetup } = useAuth();
-
-  console.log('🛡️ ProfileSetupRoute Guard:', {
-    hasUser: !!user,
-    isLoading,
-    needsProfileSetup,
-    username: user?.username
-  });
 
   if (isLoading) {
     return (
@@ -35,28 +27,18 @@ const ProfileSetupRoute: React.FC<{ children: React.ReactElement }> = ({ childre
   }
 
   if (!user) {
-    console.log('❌ ProfileSetupRoute: No user, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 
   if (!needsProfileSetup) {
-    console.log('✅ ProfileSetupRoute: Profile complete, redirecting to /home');
     return <Navigate to="/home" replace />;
   }
 
-  console.log('✅ ProfileSetupRoute: Showing profile setup page');
   return children;
 };
 
-// Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const { user, isLoading, needsProfileSetup } = useAuth();
-
-  console.log('🛡️ ProtectedRoute Guard:', {
-    hasUser: !!user,
-    isLoading,
-    needsProfileSetup
-  });
 
   if (isLoading) {
     return (
@@ -67,16 +49,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }
   }
 
   if (!user) {
-    console.log('❌ ProtectedRoute: No user, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 
   if (needsProfileSetup) {
-    console.log('🔄 ProtectedRoute: Profile incomplete, redirecting to /profile-setup');
     return <Navigate to="/profile-setup" replace />;
   }
 
-  console.log('✅ ProtectedRoute: Access granted');
   return children;
 };
 
@@ -86,16 +65,8 @@ const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        {/* ✅ CRITICAL: AUTH CALLBACK MUST BE FIRST! */}
-        <Route 
-          path="/auth/callback" 
-          element={
-            <>
-              {console.log('🎯 /auth/callback route MATCHED!')}
-              <AuthCallback />
-            </>
-          } 
-        />
+        {/* Auth Callback */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Public routes */}
         <Route
@@ -107,7 +78,7 @@ const AppRoutes = () => {
           element={user ? <Navigate to="/home" replace /> : <LoginPage />}
         />
 
-        {/* Profile Setup Route */}
+        {/* Profile Setup */}
         <Route
           path="/profile-setup"
           element={
@@ -135,8 +106,7 @@ const AppRoutes = () => {
           }
         />
 
-        {/* 👤 PROFILE ROUTES - ORDER MATTERS! */}
-        {/* Edit YOUR OWN profile - must be BEFORE /:username */}
+        {/* Profile Routes */}
         <Route
           path="/profile"
           element={
@@ -145,13 +115,21 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
-        {/* View OTHER users' profiles */}
         <Route
           path="/profile/:username"
           element={
             <ProtectedRoute>
               <PublicUserProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Saved Posts */}
+        <Route
+          path="/saved"
+          element={
+            <ProtectedRoute>
+              <SavedPostsPage />
             </ProtectedRoute>
           }
         />
@@ -165,7 +143,7 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Catch-all route */}
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
