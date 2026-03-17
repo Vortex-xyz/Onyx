@@ -1,4 +1,4 @@
-// src/pages/HomePage.tsx - WITH SAVED POSTS INTEGRATION
+// src/pages/HomePage.tsx - COMPLETE WITH FCM + PWA
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,7 @@ import { postQueue } from '../services/postQueue';
 import { reportPost, ReportReason } from '../services/reportService';
 import { moderateContent } from '../services/contentFilter';
 import { savePost, unsavePost, isPostSaved } from '../services/savedPostsService';
+import { requestNotificationPermission, listenForMessages } from '../services/fcmService';
 import { ExplorePage } from './ExplorePage';
 import GalleryPage from './GalleryPage';
 import { ProfilePage } from './ProfilePage';
@@ -34,6 +35,7 @@ import { PostCard } from '../components/home/PostCard';
 import { CreatePostModal } from '../components/home/CreatePostModal';
 import { MobileBottomNav } from '../components/home/MobileBottomNav';
 import { ReportModal } from '../components/home/ReportModal';
+import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
 
 // Import types from components
 import { 
@@ -233,6 +235,80 @@ export default function HomePage() {
 
     loadSavedStatus();
   }, [user, posts.length]);
+
+  // FCM Notification Permission Request
+  useEffect(() => {
+    if (user) {
+      const timer = setTimeout(() => {
+        requestNotificationPermission(user.id).then(token => {
+          if (token) {
+            console.log('✅ FCM token received:', token);
+          }
+        }).catch(error => {
+          console.error('FCM permission error:', error);
+        });
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  // FCM Foreground Message Listener
+  useEffect(() => {
+    if (!user) return;
+
+    listenForMessages((payload) => {
+      console.log('📬 Foreground message received:', payload);
+      
+      const title = payload.notification?.title || 'New notification';
+      const body = payload.notification?.body || '';
+      
+      toast.custom((t) => (
+        <div
+          className={`${
+            t.visible ? 'animate-enter' : 'animate-leave'
+          } max-w-md w-full bg-gray-900 shadow-lg rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-purple-600/30`}
+        >
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <img
+                  className="h-10 w-10 rounded-full"
+                  src={payload.notification?.icon || '/logo192.png'}
+                  alt=""
+                />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-bold text-white">
+                  {title}
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  {body}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-800">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                if (payload.data?.url) {
+                  window.location.href = payload.data.url;
+                }
+              }}
+              className="w-full border border-transparent rounded-none rounded-r-2xl p-4 flex items-center justify-center text-sm font-medium text-purple-400 hover:text-purple-300"
+            >
+              View
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 5000,
+        position: 'top-right'
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Queue monitoring
   useEffect(() => {
@@ -484,7 +560,6 @@ export default function HomePage() {
 
     const isSaved = savedPosts.has(postId);
 
-    // Optimistic update
     setSavedPosts(prev => {
       const newSet = new Set(prev);
       isSaved ? newSet.delete(postId) : newSet.add(postId);
@@ -524,7 +599,6 @@ export default function HomePage() {
     }
   };
 
-  // Loading screen
   if (authLoading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-black' : 'bg-gray-50'}`}>
@@ -541,9 +615,10 @@ export default function HomePage() {
     );
   }
 
-  // Main render
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-black' : 'bg-gray-50'}`}>
+      <PWAInstallPrompt />
+
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className={`absolute top-0 right-1/4 w-[600px] h-[600px] bg-purple-600 rounded-full blur-[150px] ${darkMode ? 'opacity-10' : 'opacity-5'}`}></div>
         <div className={`absolute bottom-0 left-1/3 w-[600px] h-[600px] bg-violet-600 rounded-full blur-[150px] ${darkMode ? 'opacity-5' : 'opacity-3'}`}></div>

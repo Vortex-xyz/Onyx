@@ -1,6 +1,7 @@
 // src/components/home/TopNav.tsx
 import React from 'react';
-import { FaBolt, FaSearch, FaBell, FaSun, FaMoon } from 'react-icons/fa';
+import { FaBolt, FaSearch, FaSun, FaMoon } from 'react-icons/fa';
+import NotificationBell from '../NotificationBell'; // ← ADD THIS IMPORT
 import { UserData } from './types';
 
 interface TopNavProps {
@@ -49,12 +50,8 @@ export const TopNav: React.FC<TopNavProps> = ({
             <FaSearch className="text-lg" />
           </button>
 
-          <button className={`p-2 rounded-lg transition-all relative ${
-            darkMode ? 'text-gray-400 hover:text-purple-500 hover:bg-gray-900' : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100'
-          }`}>
-            <FaBell className="text-lg" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-purple-600 rounded-full"></span>
-          </button>
+          {/* REPLACED OLD BELL BUTTON WITH NotificationBell COMPONENT */}
+          <NotificationBell />
 
           <button
             onClick={onToggleDarkMode}
