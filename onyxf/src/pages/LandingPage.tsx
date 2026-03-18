@@ -251,7 +251,7 @@ export default function LandingPage() {
             }}
           >
             <p className="text-4xl md:text-5xl font-light italic text-gray-300 leading-relaxed">
-              "Throughout Heaven and Earth,{' '}
+              "Throughout Server and your Wifi,{' '}
               <span className="text-purple-400 font-medium">I alone am the honored one</span>"
             </p>
             <p className="text-gray-600 text-sm">
